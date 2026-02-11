@@ -62,6 +62,16 @@ export const useGameRoom = (roomId: string, playerName: string) => {
 
         channelRef.current = channel;
 
+        const handleReset = () => {
+            setGameStatus('waiting');
+            setDrawnNumbers([]);
+            setCurrentNumber(null);
+            setWinner(null);
+            setMarkedNumbers(new Set());
+            setWaitingKinhPlayer(null);
+            setMyTicket(generateTicket());
+        };
+
         channel
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
@@ -104,12 +114,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 setMarkedNumbers(new Set());
             })
             .on('broadcast', { event: 'game_reset' }, () => {
-                setGameStatus('waiting');
-                setDrawnNumbers([]);
-                setCurrentNumber(null);
-                setWinner(null);
-                setMarkedNumbers(new Set());
-                setMyTicket(generateTicket());
+                handleReset();
             })
             .on('broadcast', { event: 'number_draw' }, ({ payload }) => {
                 setDrawnNumbers(prev => [...prev, payload.number]);
@@ -211,10 +216,13 @@ export const useGameRoom = (roomId: string, playerName: string) => {
 
     const toggleMark = useCallback((num: number, isDrawn: boolean) => {
         if (!isDrawn) return;
-        setMarkedNumbers(prev => {
-            const next = new Set(prev);
-            if (next.has(num)) next.delete(num);
-            else next.add(num);
+        setMarkedNumbers(prevMarked => {
+            const next = new Set(prevMarked);
+            if (next.has(num)) {
+                next.delete(num);
+            } else {
+                next.add(num);
+            }
             return next;
         });
     }, []);
@@ -226,6 +234,14 @@ export const useGameRoom = (roomId: string, playerName: string) => {
             event: 'game_reset',
             payload: {},
         });
+        // Locally reset for host (broadcast doesn't echo to sender)
+        setGameStatus('waiting');
+        setDrawnNumbers([]);
+        setCurrentNumber(null);
+        setWinner(null);
+        setMarkedNumbers(new Set());
+        setWaitingKinhPlayer(null);
+        setMyTicket(generateTicket());
     }, [isHost]);
 
     return {

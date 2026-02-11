@@ -12,6 +12,39 @@ interface LotoCardProps {
     onMark: (num: number, isDrawn: boolean) => void;
 }
 
+interface LotoCellProps {
+    num: number | null;
+    isDrawn: boolean;
+    isMarked: boolean;
+    isCurrent: boolean;
+    onMark: (num: number, isDrawn: boolean) => void;
+}
+
+const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onMark }: LotoCellProps) {
+    if (num === null) return <div className="loto-cell empty" />;
+
+    return (
+        <motion.div
+            whileTap={{ scale: 0.9, rotate: -2 }}
+            onClick={() => onMark(num, isDrawn)}
+            className={`
+                loto-cell cursor-pointer
+                ${isMarked ? "matched" : ""}
+                ${isCurrent ? "active" : ""}
+            `}
+        >
+            <span className={`relative z-10 font-black italic font-impact tracking-tighter font-variant-numeric-tabular-nums ${isCurrent ? "text-white" : "text-black"}`}>
+                {num < 10 ? `0${num}` : num}
+                {/* Marking hint for drawn but not marked */}
+                {isDrawn && !isMarked && !isCurrent && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full animate-ping" />
+                )}
+            </span>
+            {isMarked && <div className="matched-symbol" />}
+        </motion.div>
+    );
+});
+
 const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, markedNumbers, onMark }: LotoCardProps) {
     if (!ticket) return null;
 
@@ -48,38 +81,16 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                             <div className="space-y-1">
                                 {frame.map((row, rowIndex) => (
                                     <div key={rowIndex} className="loto-grid">
-                                        {row.map((num, colIndex) => {
-                                            const isDrawn = num !== null && drawnNumbers.has(num);
-                                            const isMarked = num !== null && markedNumbers.has(num);
-                                            const isCurrent = num !== null && num === currentNumber;
-
-                                            return (
-                                                <motion.div
-                                                    key={`${rowIndex}-${colIndex}`}
-                                                    whileTap={num !== null ? { scale: 0.9, rotate: -2 } : {}}
-                                                    onClick={() => num !== null && onMark(num, isDrawn)}
-                                                    className={`
-                                                        loto-cell
-                                                        ${num === null ? "empty" : "cursor-pointer"}
-                                                        ${isMarked ? "matched" : ""}
-                                                        ${isCurrent ? "active" : ""}
-                                                    `}
-                                                >
-                                                    {num !== null && (
-                                                        <>
-                                                            <span className={`relative z-10 font-black italic font-impact tracking-tighter font-variant-numeric-tabular-nums ${isCurrent ? "text-white" : "text-black"}`}>
-                                                                {num < 10 ? `0${num}` : num}
-                                                                {/* Marking hint for drawn but not marked */}
-                                                                {isDrawn && !isMarked && !isCurrent && (
-                                                                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full animate-ping" />
-                                                                )}
-                                                            </span>
-                                                            {isMarked && <div className="matched-symbol" />}
-                                                        </>
-                                                    )}
-                                                </motion.div>
-                                            );
-                                        })}
+                                        {row.map((num, colIndex) => (
+                                            <LotoCell
+                                                key={`${rowIndex}-${colIndex}`}
+                                                num={num}
+                                                isDrawn={num !== null && drawnNumbers.has(num)}
+                                                isMarked={num !== null && markedNumbers.has(num)}
+                                                isCurrent={num !== null && num === currentNumber && !markedNumbers.has(num)}
+                                                onMark={onMark}
+                                            />
+                                        ))}
                                     </div>
                                 ))}
                             </div>

@@ -287,12 +287,18 @@ export default function GameRoom() {
                             <h2 className="text-6xl font-black text-white uppercase tracking-tighter mb-2 italic">KINH RỒI!</h2>
                             <p className="text-2xl font-black text-yellow-500 mb-10 tracking-tight uppercase">Chúc mừng {winner.name}!</p>
 
-                            <button
-                                onClick={() => resetGame()}
-                                className="w-full btn-primary !text-lg !shadow-[0_4px_0_#92400e]"
-                            >
-                                <RotateCcw size={20} className="mr-2" /> CHƠI VÁN MỚI
-                            </button>
+                            {isHost ? (
+                                <button
+                                    onClick={() => resetGame()}
+                                    className="w-full btn-primary !text-lg !shadow-[0_4px_0_#92400e]"
+                                >
+                                    <RotateCcw size={20} className="mr-2" /> CHƠI VÁN MỚI
+                                </button>
+                            ) : (
+                                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                                    <p className="text-white/60 text-sm italic">Đang chờ chủ phòng bắt đầu ván mới...</p>
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
