@@ -14,6 +14,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Home, Share2, Trophy, BellRing, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
+const FUNNY_PHRASES = [
+    "Tim đập thình thịch, chỉ chờ hàng {info}!",
+    "Hồi hộp quá, {info} ơi hiện thân đi nào!",
+    "Mồ hôi hột rơi lã chã, hóng hàng {info} quá xá!",
+    "Chỉ một bước nữa thôi là thành tỉ phú, gọi tên hàng {info}!",
+    "Hàng {info} mà ra là vang danh thiên hạ luôn!",
+    "Thần tài gõ cửa hàng {info} rồi, chuẩn bị chưa?",
+];
+
+const OPPONENT_PHRASES = [
+    "Tay này đang rình hàng {info}, chặn nó lại anh em ơi!",
+    "Bái phục, {name} sắp Kinh với hàng {info} rồi kìa!",
+    "Cẩn thận nha, {name} đang hóng hàng {info} cháy máy!",
+    "Đừng để con số hàng {info} xuất hiện, {name} sắp hốt bạc rồi!",
+    "Áp lực quá, {name} đang chờ hàng {info} tỏa sáng!",
+];
+
 export default function GameRoom() {
     const searchParams = useSearchParams();
     const params = useParams();
@@ -67,22 +84,7 @@ export default function GameRoom() {
 
     const isWaitingKinh = waitingNumbers.length > 0;
 
-    const FUNNY_PHRASES = [
-        "Tim đập thình thịch, chỉ chờ hàng {info}!",
-        "Hồi hộp quá, {info} ơi hiện thân đi nào!",
-        "Mồ hôi hột rơi lã chã, hóng hàng {info} quá xá!",
-        "Chỉ một bước nữa thôi là thành tỉ phú, gọi tên hàng {info}!",
-        "Hàng {info} mà ra là vang danh thiên hạ luôn!",
-        "Thần tài gõ cửa hàng {info} rồi, chuẩn bị chưa?",
-    ];
 
-    const OPPONENT_PHRASES = [
-        "Tay này đang rình hàng {info}, chặn nó lại anh em ơi!",
-        "Bái phục, {name} sắp Kinh với hàng {info} rồi kìa!",
-        "Cẩn thận nha, {name} đang hóng hàng {info} cháy máy!",
-        "Đừng để con số hàng {info} xuất hiện, {name} sắp hốt bạc rồi!",
-        "Áp lực quá, {name} đang chờ hàng {info} tỏa sáng!",
-    ];
 
     useEffect(() => {
         const signature = waitingNumbers.join(",");
@@ -108,7 +110,7 @@ export default function GameRoom() {
         } else if (!isWaitingKinh && lastWaitingSignature !== "") {
             setLastWaitingSignature("");
         }
-    }, [isWaitingKinh, lastWaitingSignature, declareWaitingKinh, waitingNumbers, FUNNY_PHRASES]);
+    }, [isWaitingKinh, lastWaitingSignature, declareWaitingKinh, waitingNumbers]);
 
     useEffect(() => {
         if (gameStatus === 'waiting' || gameStatus === 'ended') {
@@ -179,7 +181,7 @@ export default function GameRoom() {
                 }
             );
         }
-    }, [waitingKinhPlayer, playerName, OPPONENT_PHRASES]);
+    }, [waitingKinhPlayer, playerName]);
 
     const copyRoomCode = () => {
         navigator.clipboard.writeText(roomId);

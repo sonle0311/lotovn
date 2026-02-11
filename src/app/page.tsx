@@ -125,7 +125,7 @@ export default function LandingPage() {
                     placeholder="VD: Công Tử Bạc Liêu"
                     value={playerName}
                     onChange={(e) => { setPlayerName(e.target.value); setError(""); }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold"
                   />
                 </div>
 
@@ -136,7 +136,7 @@ export default function LandingPage() {
                     placeholder="Nhập mã hoặc để trống..."
                     value={roomId}
                     onChange={(e) => { setRoomId(e.target.value.toUpperCase()); setError(""); }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold tracking-widest"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold tracking-widest"
                   />
                 </div>
               </div>

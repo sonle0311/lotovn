@@ -20,7 +20,8 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
         if (autoDraw && gameStatus === 'playing') {
             if (countdown <= 0) {
                 const allNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
-                const available = allNumbers.filter(n => !drawnNumbers.includes(n));
+                const drawnSet = new Set(drawnNumbers);
+                const available = allNumbers.filter(n => !drawnSet.has(n));
 
                 if (available.length > 0) {
                     const randomIndex = Math.floor(Math.random() * available.length);
@@ -84,7 +85,8 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
                         <button
                             onClick={() => {
                                 const allNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
-                                const available = allNumbers.filter(n => !drawnNumbers.includes(n));
+                                const drawnSet = new Set(drawnNumbers);
+                                const available = allNumbers.filter(n => !drawnSet.has(n));
                                 if (available.length > 0) {
                                     onDraw(available[Math.floor(Math.random() * available.length)]);
                                 }

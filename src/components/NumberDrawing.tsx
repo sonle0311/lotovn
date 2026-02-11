@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { formatNumberVietnamese } from "@/lib/gameLogic";
 import { Volume2, VolumeX } from "lucide-react";
-import { useState, memo } from "react";
+import { useState, memo, useMemo } from "react";
 
 interface NumberDrawingProps {
     currentNumber: number | null;
@@ -12,6 +12,7 @@ interface NumberDrawingProps {
 
 const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers }: NumberDrawingProps) {
     const [isMuted, setIsMuted] = useState(false);
+    const reversedNumbers = useMemo(() => [...drawnNumbers].reverse(), [drawnNumbers]);
 
     return (
         <div className="glass-card p-3 sm:p-6 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[300px] border-yellow-500/30 overflow-hidden relative">
@@ -70,7 +71,7 @@ const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers 
                     <div className="flex-1 h-px bg-white/5" />
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center max-h-20 overflow-y-auto pr-1 custom-scrollbar">
-                    {drawnNumbers.slice().reverse().map((num, i) => (
+                    {reversedNumbers.map((num, i) => (
                         <motion.div
                             key={`${num}-${i}`}
                             initial={i === 0 ? { scale: 0, opacity: 0 } : false}
