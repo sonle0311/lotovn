@@ -6,9 +6,12 @@ import { useEffect, useState } from "react";
 export default function TetBackground() {
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-            {/* Mesh Gradient Base */}
-            <div className="absolute inset-0 bg-red-950">
-                <div className="absolute top-0 left-0 w-full h-full opacity-30 bg-[radial-gradient(circle_at_20%_20%,#7f1d1d_0%,transparent_50%),radial-gradient(circle_at_80%_80%,#991b1b_0%,transparent_50%),radial-gradient(circle_at_50%_50%,#450a0a_0%,transparent_100%)]" />
+            {/* Premium Mesh Gradient Base */}
+            <div className="absolute inset-0 bg-[#3b0707]">
+                <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] opacity-40 bg-[radial-gradient(circle_at_20%_20%,#7f1d1d_0%,transparent_50%),radial-gradient(circle_at_80%_80%,#991b1b_0%,transparent_50%),radial-gradient(circle_at_50%_50%,#450a0a_0%,transparent_80%)] animate-pulse" style={{ animationDuration: '8s' }} />
+
+                {/* Noise Texture for Premium Feel */}
+                <div className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }} />
             </div>
 
             {/* Traditional Pattern Overlay */}
@@ -16,10 +19,11 @@ export default function TetBackground() {
 
             {/* Animated Lanterns */}
             <div className="absolute top-0 left-0 w-full h-full">
-                <Lantern position={{ top: "5%", left: "10%" }} size={80} delay={0} />
-                <Lantern position={{ top: "2%", left: "25%" }} size={60} delay={1.5} />
-                <Lantern position={{ top: "8%", left: "85%" }} size={70} delay={0.5} />
-                <Lantern position={{ top: "4%", left: "70%" }} size={90} delay={2} />
+                <Lantern position={{ top: "4%", left: "8%" }} size={75} delay={0} />
+                <Lantern position={{ top: "1%", left: "22%" }} size={55} delay={1.5} />
+                <Lantern position={{ top: "6%", left: "82%" }} size={65} delay={0.5} />
+                <Lantern position={{ top: "3%", left: "68%" }} size={85} delay={2} />
+                <Lantern position={{ top: "15%", left: "92%" }} size={45} delay={3} />
             </div>
 
             {/* Floating Petals */}

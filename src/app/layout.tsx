@@ -7,8 +7,11 @@ const inter = Inter({ subsets: ["latin"] });
 const lexend = Lexend({ subsets: ["latin"], weight: ["400", "700"] });
 
 export const metadata: Metadata = {
-  title: "Lô Tô Tết - Game Việt Truyền Thống",
-  description: "Trò chơi Lô Tô đa người chơi phong cách lễ hội Việt Nam",
+  title: "LotoVN - Trải Nghiệm Lô Tô Tết Premium",
+  description: "Trò chơi Lô Tô đa người chơi phong cách lễ hội Việt Nam hiện đại",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

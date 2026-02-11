@@ -11,6 +11,7 @@ export interface Player {
     isHost: boolean;
     status: 'waiting' | 'playing' | 'won';
     isWaitingKinh?: boolean;
+    waitingNumbers?: number[];
 }
 
 export interface ChatMessage {
@@ -129,6 +130,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
             })
             .on('broadcast', { event: 'waiting_kinh' }, ({ payload }) => {
                 setWaitingKinhPlayer(payload.player);
+                // Clear state after 5s but notification logic will be in component
                 setTimeout(() => setWaitingKinhPlayer(null), 5000);
             });
 
@@ -203,8 +205,15 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         setGameStatus('ended');
     }, [playerName, isHost]);
 
-    const declareWaitingKinh = useCallback((isWaiting: boolean) => {
-        const player: Player = { id: playerName, name: playerName, isHost, status: 'playing', isWaitingKinh: isWaiting };
+    const declareWaitingKinh = useCallback((isWaiting: boolean, waitingNumbers?: number[]) => {
+        const player: Player = {
+            id: playerName,
+            name: playerName,
+            isHost,
+            status: 'playing',
+            isWaitingKinh: isWaiting,
+            waitingNumbers
+        };
         if (isWaiting) {
             channelRef.current?.send({
                 type: 'broadcast',

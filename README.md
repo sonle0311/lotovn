@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏮 LotoVN - Trải nghiệm Loto Tết trực tuyến Premium
 
-## Getting Started
+LotoVN mang đến không khí Tết truyền thống vào không gian số với giao diện hiện đại, mượt mà và các tính năng tương tác thời gian thực đỉnh cao.
 
-First, run the development server:
+## ✨ Tính năng nổi bật
 
+- **Giao diện Retro-Futurism**: Thiết kế cao cấp, hiệu ứng neon pulse và họa tiết Việt Nam tinh tế.
+- **Hệ thống "Kinh" thông minh**: Tự động nhận diện và báo hiệu khi người chơi đủ số để Kinh với hiệu ứng rực rỡ.
+- **Thông báo "Chờ Kinh" hài hước**: Hệ thống thông báo sử dụng các câu nói dân gian vui nhộn, tăng kịch tính cho ván đấu.
+- **Chế độ chơi đa nhiệm**: Mobile-first design cho phép vừa chơi vừa chat cùng lúc mà không bị gián đoạn.
+- **Theo dõi thời gian thực**: Huy hiệu số đang xổ luôn hiển thị ở góc màn hình, giúp người chơi không bỏ lỡ bất kỳ con số nào.
+- **Phòng chơi riêng tư**: Dễ dàng tạo và chia sẻ mã phòng để chơi cùng bạn bè.
+
+## 🛠 Công nghệ sử dụng
+
+- **Frontend**: Next.js 15, Tailwind CSS, Framer Motion
+- **Backend/Realtime**: Supabase (Realtime Channel & Presence)
+- **UI Components**: Lucide React, Sonner (Toasts), Canvas Confetti
+
+## 🚀 Hướng dẫn cài đặt
+
+### 1. Clone repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd lotovn
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Cấu hình môi trường
+Tạo file `.env.local` dựa trên mẫu `.env.example`:
+```bash
+cp .env.example .env.local
+```
+Cập nhật các biến `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` từ trang quản trị Supabase của bạn.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Cài đặt thư viện
+```bash
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Chạy dự án
+```bash
+npm run dev
+```
 
-## Learn More
+Mở [http://localhost:3000](http://localhost:3000) trên trình duyệt để bắt đầu trải nghiệm!
 
-To learn more about Next.js, take a look at the following resources:
+## 📜 Giấy phép
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Dự án này được phát triển nhằm mục đích giải trí và học tập. Chúc bạn có những phút giây vui vẻ bên bạn bè và người thân!

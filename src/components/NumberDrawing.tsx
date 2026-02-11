@@ -14,9 +14,9 @@ const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers 
     const [isMuted, setIsMuted] = useState(false);
 
     return (
-        <div className="glass-card p-4 sm:p-6 flex flex-col items-center justify-center min-h-[250px] sm:min-h-[300px] border-yellow-500/30 overflow-hidden relative">
+        <div className="glass-card p-3 sm:p-6 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[300px] border-yellow-500/30 overflow-hidden relative">
             {/* Background Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-yellow-500/20 blur-3xl rounded-full pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-yellow-500/20 blur-3xl rounded-full pointer-events-none" />
 
             <div className="flex justify-between w-full mb-2 sm:mb-4 px-2 relative z-10">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500/60">Đang xổ số</h3>

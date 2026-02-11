@@ -201,8 +201,16 @@ export const checkRowWaitingKinh = (row: (number | null)[], drawnNumbers: Set<nu
 };
 
 /**
- * Check if the card has any row "Chờ Kinh"
+ * Check if the card has any row "Chờ Kinh" and return the missing numbers
  */
-export const checkCardWaitingKinh = (card: LotoCard, drawnNumbers: Set<number>): boolean => {
-    return card.some(row => checkRowWaitingKinh(row, drawnNumbers));
+export const getCardWaitingNumbers = (card: LotoCard, drawnNumbers: Set<number>): number[] => {
+    const waitingNumbers = new Set<number>();
+    card.forEach(row => {
+        const rowNumbers = row.filter((n): n is number => n !== null);
+        const missing = rowNumbers.filter(n => !drawnNumbers.has(n));
+        if (missing.length === 1) {
+            waitingNumbers.add(missing[0]);
+        }
+    });
+    return Array.from(waitingNumbers);
 };
