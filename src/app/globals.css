@@ -1,24 +1,33 @@
 @import "tailwindcss";
 
 @theme {
+  --color-gold-400: #fbdf3b;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
   --color-red-950: #450a0a;
   --color-red-900: #7f1d1d;
-  --color-yellow-400: #fbbf24;
-  --color-yellow-500: #f59e0b;
-  --color-yellow-600: #d97706;
+  --color-red-800: #991b1b;
 }
 
 @layer components {
+  .btn-tactile {
+    @apply relative transition-all duration-150 active:scale-95 active:brightness-110 cursor-pointer select-none;
+  }
+
   .btn-primary {
-    @apply bg-yellow-500 hover:bg-yellow-400 text-red-900 font-bold py-3 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2;
+    @apply relative transition-all duration-150 active:scale-95 active:brightness-110 cursor-pointer select-none bg-linear-to-b from-yellow-400 to-yellow-600 text-red-950 font-black py-4 px-8 rounded-2xl shadow-[0_4px_0_#92400e] hover:shadow-[0_2px_0_#92400e] hover:translate-y-[2px] active:translate-y-[4px] active:shadow-none flex items-center justify-center gap-3 uppercase tracking-wider text-sm;
   }
 
   .btn-secondary {
-    @apply bg-transparent border-2 border-yellow-500 hover:bg-yellow-500/10 text-yellow-500 font-bold py-3 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2;
+    @apply relative transition-all duration-150 active:scale-95 active:brightness-110 cursor-pointer select-none bg-white/10 backdrop-blur-md border-2 border-yellow-500/50 text-yellow-500 font-black py-4 px-8 rounded-2xl hover:bg-yellow-500/20 active:bg-yellow-500/30 flex items-center justify-center gap-3 uppercase tracking-wider text-sm;
   }
 
   .glass-card {
-    @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl;
+    @apply bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl;
+  }
+
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl;
   }
 }
 
@@ -40,10 +49,10 @@ body {
 .loto-grid {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
-  gap: 2px;
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 2px;
-  border: 2px solid #000;
+  gap: 1px;
+  background-color: #000;
+  padding: 1px;
+  border: 1px solid #000;
 }
 
 .loto-cell {
@@ -52,92 +61,61 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 1.5rem;
-  transition: all 0.2s ease;
-  background-color: transparent;
+  font-size: clamp(1rem, 4vw, 1.8rem);
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background-color: #fff;
   color: #000;
   user-select: none;
-}
-
-.loto-cell:not(.empty) {
-  background-color: rgba(255, 255, 255, 0.3);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
 .loto-cell.empty {
-  background-color: transparent;
-  color: rgba(0, 0, 0, 0.1);
-  font-size: 0.6rem;
-  font-weight: bold;
+  background-color: #f8f8f8;
+  color: transparent;
+  pointer-events: none;
 }
 
 .paper-ticket {
-  background-image: radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
-  background-size: 10px 10px;
+  background-image:
+    radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.03) 1px, transparent 0),
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 15px 15px, 100% 100%;
   box-shadow:
-    5px 5px 0px rgba(0, 0, 0, 0.2),
-    inset -5px -5px 15px rgba(255, 255, 255, 0.4),
-    inset 5px 5px 15px rgba(0, 0, 0, 0.05);
-}
-
-.matched::after {
-  content: "✓";
-  position: absolute;
-  font-size: 2.5rem;
-  color: rgba(220, 38, 38, 0.6);
-  pointer-events: none;
-  font-family: serif;
-  transform: rotate(-15deg);
-  z-index: 5;
-}
-
-.active {
-  animation: cell-hint 1s infinite alternate;
-}
-
-@keyframes cell-hint {
-  from {
-    background-color: rgba(255, 255, 255, 0.3);
-  }
-
-  to {
-    background-color: rgba(245, 158, 11, 0.4);
-    transform: scale(1.02);
-  }
-}
-
-.loto-cell.active {
-  background: white;
-  color: #991b1b;
-  transform: scale(0.95);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    0 20px 50px rgba(0, 0, 0, 0.3),
+    inset 0 0 100px rgba(255, 255, 255, 0.1);
 }
 
 .loto-cell.matched {
   background: #f59e0b;
   color: #450a0a;
-  animation: loto-pulse 1.5s infinite;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes loto-pulse {
-  0% {
-    transform: scale(1);
-  }
+.loto-cell.active {
+  background: #ef4444 !important;
+  color: #fff !important;
+  z-index: 10;
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
 
-  50% {
-    transform: scale(1.05) rotate(2deg);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+.matched-symbol {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  width: 80%;
+  height: 80%;
+  border: 3px solid rgba(220, 38, 38, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 /* Vietnamese patterns */
 .viet-pattern {
   background-image: radial-gradient(#f59e0b 0.5px, transparent 0.5px);
-  background-size: 20px 20px;
-  opacity: 0.1;
+  background-size: 24px 24px;
+  opacity: 0.05;
 }
 
 .font-impact {

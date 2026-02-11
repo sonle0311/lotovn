@@ -192,7 +192,7 @@ export const checkFullCardWin = (card: LotoCard, drawnNumbers: Set<number>): boo
 /**
  * Check if a row is "Chờ Kinh" (missing exactly one number)
  */
-export const checkRowChờKinh = (row: (number | null)[], drawnNumbers: Set<number>): boolean => {
+export const checkRowWaitingKinh = (row: (number | null)[], drawnNumbers: Set<number>): boolean => {
     const rowNumbers = row.filter((n): n is number => n !== null);
     if (rowNumbers.length === 0) return false;
 
@@ -203,6 +203,6 @@ export const checkRowChờKinh = (row: (number | null)[], drawnNumbers: Set<numb
 /**
  * Check if the card has any row "Chờ Kinh"
  */
-export const checkCardChờKinh = (card: LotoCard, drawnNumbers: Set<number>): boolean => {
-    return card.some(row => checkRowChờKinh(row, drawnNumbers));
+export const checkCardWaitingKinh = (card: LotoCard, drawnNumbers: Set<number>): boolean => {
+    return card.some(row => checkRowWaitingKinh(row, drawnNumbers));
 };

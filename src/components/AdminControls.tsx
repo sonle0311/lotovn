@@ -15,7 +15,6 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
     const [autoDraw, setAutoDraw] = useState(false);
     const [drawInterval, setDrawInterval] = useState(5); // seconds
     const [countdown, setCountdown] = useState(0);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (autoDraw && gameStatus === 'playing') {
@@ -41,15 +40,6 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
         }
     }, [autoDraw, countdown, gameStatus, drawInterval, onDraw, drawnNumbers]);
 
-    // Independent effect to reset countdown if drawnNumbers changes while autoDraw is on
-    // This handles manual draws during auto-draw mode
-    useEffect(() => {
-        if (autoDraw && drawnNumbers.length > 0) {
-            // Optional: reset countdown when a number is drawn to keep intervals consistent
-            // setCountdown(drawInterval);
-        }
-    }, [drawnNumbers.length, autoDraw]);
-
     const handleToggleAuto = () => {
         if (!autoDraw) {
             setCountdown(drawInterval);
@@ -58,34 +48,35 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
     };
 
     return (
-        <div className="glass-card p-6 border-yellow-500/50 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-2 opacity-10">
-                <Settings size={48} />
+        <div className="glass-card p-4 sm:p-6 border-yellow-500/50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none">
+                <Settings size={64} />
             </div>
 
-            <h3 className="text-sm font-black uppercase tracking-widest text-yellow-500 mb-6 flex items-center gap-2">
-                <CrownIcon /> Bảng Điều Khiển Host
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-4 sm:mb-6 flex items-center gap-2">
+                <CrownIcon /> Bảng Điều Khiển Host…
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {gameStatus === 'waiting' ? (
                     <button
                         onClick={onStart}
                         className="col-span-2 btn-primary py-4"
                     >
-                        <Play size={20} /> BẮT ĐẦU GAME
+                        <Play size={20} fill="currentColor" /> BẮT ĐẦU GAME
                     </button>
                 ) : (
                     <>
                         <button
                             onClick={handleToggleAuto}
-                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${autoDraw
-                                ? "bg-yellow-500 text-red-900 border-yellow-400"
+                            className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl border-2 transition-all btn-tactile ${autoDraw
+                                ? "bg-yellow-500 text-red-950 border-yellow-400 shadow-[0_4px_0_#92400e]"
                                 : "bg-white/5 border-white/10 text-white hover:bg-white/10"
                                 }`}
+                            aria-label={autoDraw ? "Dừng tự động xổ" : "Bắt đầu tự động xổ"}
                         >
-                            {autoDraw ? <Pause size={24} /> : <Play size={24} />}
-                            <span className="text-[10px] font-black uppercase mt-2">
+                            {autoDraw ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
+                            <span className="text-[9px] font-black uppercase mt-2">
                                 {autoDraw ? `Tự động (${countdown}s)` : "Tự động xổ"}
                             </span>
                         </button>
@@ -99,10 +90,11 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
                                 }
                             }}
                             disabled={gameStatus === 'ended'}
-                            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50"
+                            className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white hover:bg-white/10 transition-all btn-tactile disabled:opacity-50"
+                            aria-label="Xổ số ngẫu nhiên thủ công"
                         >
-                            <FastForward size={24} />
-                            <span className="text-[10px] font-black uppercase mt-2">Xổ thủ công</span>
+                            <FastForward size={20} fill="currentColor" />
+                            <span className="text-[9px] font-black uppercase mt-2">Xổ thủ công</span>
                         </button>
                     </>
                 )}
@@ -112,16 +104,16 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
                         setAutoDraw(false);
                         onReset();
                     }}
-                    className="col-span-2 mt-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+                    className="col-span-2 mt-2 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors"
                 >
                     <RotateCcw size={12} /> Làm mới game (Reset)
                 </button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-white/10">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/10">
                 <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Tốc độ xổ</span>
-                    <span className="text-xs font-bold text-yellow-500">{drawInterval} giây / số</span>
+                    <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tốc độ xổ</span>
+                    <span className="text-[10px] font-black text-yellow-500">{drawInterval} giây / số</span>
                 </div>
                 <input
                     type="range"
@@ -129,7 +121,7 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
                     max="15"
                     value={drawInterval}
                     onChange={(e) => setDrawInterval(parseInt(e.target.value))}
-                    className="w-full accent-yellow-500"
+                    className="w-full accent-yellow-500 cursor-pointer"
                 />
             </div>
         </div>
@@ -138,7 +130,7 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
 
 function CrownIcon() {
     return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
         </svg>
     );
