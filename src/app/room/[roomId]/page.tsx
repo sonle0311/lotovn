@@ -49,6 +49,8 @@ export default function GameRoom() {
         winner,
         waitingKinhPlayer,
         markedNumbers,
+        isRoomFull,
+        chatCooldown,
         startGame,
         drawNumber,
         sendMessage,
@@ -71,6 +73,19 @@ export default function GameRoom() {
             router.push("/");
         }
     }, [playerName, router]);
+
+    // Redirect khi phòng đầy
+    useEffect(() => {
+        if (isRoomFull) {
+            toast.error(`Phòng ${roomId} đã đầy (${MAX_PLAYERS}/${MAX_PLAYERS} người)! Đang chuyển hướng...`, {
+                duration: 3000,
+            });
+            const timer = setTimeout(() => router.push("/"), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [isRoomFull, roomId, router]);
+
+    const MAX_PLAYERS = 20;
 
     // Automatic "Chờ Kinh" notification derived from MARKED numbers
     const waitingNumbers = useMemo(() => {
@@ -329,6 +344,7 @@ export default function GameRoom() {
                                         messages={messages.slice(-5)}
                                         onSendMessage={sendMessage}
                                         playerName={playerName}
+                                        chatCooldown={chatCooldown}
                                     />
                                 </div>
                             </div>
@@ -341,6 +357,7 @@ export default function GameRoom() {
                             messages={messages}
                             onSendMessage={sendMessage}
                             playerName={playerName}
+                            chatCooldown={chatCooldown}
                         />
                     </div>
 

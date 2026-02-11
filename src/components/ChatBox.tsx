@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatBoxProps {
     messages: ChatMessage[];
-    onSendMessage: (text: string) => void;
+    onSendMessage: (text: string) => boolean | void;
     playerName: string;
+    chatCooldown?: number;
 }
 
-const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName }: ChatBoxProps) {
+const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName, chatCooldown = 0 }: ChatBoxProps) {
     const [text, setText] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -24,10 +25,14 @@ const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName }: C
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (text.trim()) {
-            onSendMessage(text.trim());
-            setText("");
+            const result = onSendMessage(text.trim());
+            if (result !== false) {
+                setText("");
+            }
         }
     };
+
+    const isCoolingDown = chatCooldown > 0;
 
     return (
         <div className="glass-card flex flex-col h-full border-white/5 overflow-hidden">
@@ -74,10 +79,18 @@ const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName }: C
                 />
                 <button
                     type="submit"
-                    disabled={!text.trim()}
-                    className="w-10 h-10 bg-yellow-500 rounded-2xl flex items-center justify-center hover:bg-yellow-400 transition-all btn-tactile disabled:opacity-30 shadow-[0_4px_0_#92400e] active:shadow-none"
+                    disabled={!text.trim() || isCoolingDown}
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all btn-tactile shadow-[0_4px_0_#92400e] active:shadow-none ${isCoolingDown
+                            ? 'bg-white/10 cursor-not-allowed opacity-50'
+                            : 'bg-yellow-500 hover:bg-yellow-400 disabled:opacity-30'
+                        }`}
+                    title={isCoolingDown ? `Chờ ${chatCooldown}s` : 'Gửi tin nhắn'}
                 >
-                    <Send size={16} className="text-red-950 fill-current" />
+                    {isCoolingDown ? (
+                        <span className="text-[10px] font-black text-white/60">{chatCooldown}s</span>
+                    ) : (
+                        <Send size={16} className="text-red-950 fill-current" />
+                    )}
                 </button>
             </form>
         </div>
