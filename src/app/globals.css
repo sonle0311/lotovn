@@ -233,3 +233,18 @@ body {
 ::-webkit-scrollbar-corner {
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Lock body scroll khi modal mở */
+body.no-scroll {
+  overflow: hidden;
+}

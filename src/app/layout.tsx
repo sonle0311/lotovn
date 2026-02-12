@@ -102,8 +102,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body className={`${inter.className} bg-red-950 text-white min-h-screen overflow-x-hidden`}>
+    <html lang="vi" suppressHydrationWarning>
+      <body className={`${inter.className} bg-red-950 text-white min-h-screen overflow-x-hidden`} suppressHydrationWarning>
         {children}
         <Toaster richColors position="top-right" />
       </body>

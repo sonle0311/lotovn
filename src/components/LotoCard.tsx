@@ -9,7 +9,8 @@ interface LotoCardProps {
     drawnNumbers: Set<number>;
     currentNumber: number | null;
     markedNumbers: Set<number>;
-    onMark: (num: number, isDrawn: boolean) => void;
+    onMark?: (num: number, isDrawn: boolean) => void;
+    readOnly?: boolean;
 }
 
 interface LotoCellProps {
@@ -17,18 +18,19 @@ interface LotoCellProps {
     isDrawn: boolean;
     isMarked: boolean;
     isCurrent: boolean;
-    onMark: (num: number, isDrawn: boolean) => void;
+    onMark?: (num: number, isDrawn: boolean) => void;
+    readOnly?: boolean;
 }
 
-const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onMark }: LotoCellProps) {
+const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onMark, readOnly }: LotoCellProps) {
     if (num === null) return <div className="loto-cell empty" />;
 
     return (
         <motion.div
-            whileTap={{ scale: 0.9, rotate: -2 }}
-            onClick={() => onMark(num, isDrawn)}
+            whileTap={readOnly ? undefined : { scale: 0.9, rotate: -2 }}
+            onClick={readOnly ? undefined : () => onMark?.(num, isDrawn)}
             className={`
-                loto-cell cursor-pointer
+                loto-cell ${readOnly ? "" : "cursor-pointer"}
                 ${isMarked ? "matched" : ""}
                 ${isCurrent ? "active" : ""}
             `}
@@ -36,7 +38,7 @@ const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onM
             <span className={`relative z-10 font-black italic font-impact tracking-tighter font-variant-numeric-tabular-nums ${isCurrent ? "text-white" : "text-black"}`}>
                 {num < 10 ? `0${num}` : num}
                 {/* Marking hint for drawn but not marked */}
-                {isDrawn && !isMarked && !isCurrent && (
+                {!readOnly && isDrawn && !isMarked && !isCurrent && (
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full animate-ping" />
                 )}
             </span>
@@ -45,11 +47,11 @@ const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onM
     );
 });
 
-const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, markedNumbers, onMark }: LotoCardProps) {
+const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, markedNumbers, onMark, readOnly }: LotoCardProps) {
     if (!ticket) return null;
 
     return (
-        <div className="w-full max-w-xl mx-auto px-1 sm:px-4">
+        <div className="w-full max-w-full mx-auto px-1 sm:px-4">
             <div
                 className="paper-ticket w-full border-[2px] sm:border-[4px] border-black rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden transition-all"
                 style={{ backgroundColor: ticket.color }}
@@ -89,6 +91,7 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                                                 isMarked={num !== null && markedNumbers.has(num)}
                                                 isCurrent={num !== null && num === currentNumber && !markedNumbers.has(num)}
                                                 onMark={onMark}
+                                                readOnly={readOnly}
                                             />
                                         ))}
                                     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
-import { useGameRoom } from "@/lib/useGameRoom";
+import { useGameRoom, WinnerData } from "@/lib/useGameRoom";
 import { checkRowWin, checkFullCardWin, getCardWaitingNumbers } from "@/lib/gameLogic";
 import LotoCard from "@/components/LotoCard";
 import NumberDrawing from "@/components/NumberDrawing";
@@ -11,7 +11,7 @@ import AdminControls from "@/components/AdminControls";
 import { useEffect, useState, useMemo } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle, Check } from "lucide-react";
+import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 const FUNNY_PHRASES = [
@@ -66,6 +66,13 @@ export default function GameRoom() {
     const [activeTab, setActiveTab] = useState<'game' | 'players' | 'chat'>('game');
     const [isMounted, setIsMounted] = useState(false);
     const drawnNumbersSet = useMemo(() => new Set(drawnNumbers), [drawnNumbers]);
+
+    // Lock body scroll khi winner modal mở — fix double scrollbar
+    useEffect(() => {
+        const isModalOpen = gameStatus === 'ended' && winner !== null;
+        document.body.classList.toggle('no-scroll', isModalOpen);
+        return () => document.body.classList.remove('no-scroll');
+    }, [gameStatus, winner]);
 
     // Set mounted state and redirect if no name
     useEffect(() => {
@@ -291,7 +298,7 @@ export default function GameRoom() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
 
-                    {/* 1. Left Sidebar: Host Controls (if host) + Game Core Info */}
+                    {/* 1. Left Sidebar: Host Controls + Number Drawing + Player List */}
                     <div className="lg:col-span-3 flex flex-col gap-4 sm:gap-6 order-2 lg:order-1">
                         {/* Host Controls Section */}
                         {isMounted && isHost && (
@@ -306,21 +313,13 @@ export default function GameRoom() {
                             </div>
                         )}
 
-                        {/* Number Status (Lồng cầu) - ONLY show for Host or on LG screens if host */}
-                        {isHost && (
-                            <div className={`${activeTab === 'chat' ? "hidden" : "flex"} lg:flex flex-col gap-4 sm:gap-6`}>
-                                <NumberDrawing currentNumber={currentNumber} drawnNumbers={drawnNumbers} />
-                                {/* Player List (Hidden on mobile tab Game, shown on mobile tab Players) */}
-                                <div className="hidden lg:block h-full">
-                                    <PlayerList players={players} />
-                                </div>
-                            </div>
-                        )}
-                        {!isHost && (
+                        {/* Lồng cầu — hiển thị cho TẤT CẢ người chơi */}
+                        <div className={`${activeTab === 'chat' ? "hidden" : "flex"} lg:flex flex-col gap-4 sm:gap-6`}>
+                            <NumberDrawing currentNumber={currentNumber} drawnNumbers={drawnNumbers} />
                             <div className="hidden lg:block h-full">
                                 <PlayerList players={players} />
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* 2. Main Center Area: Loto Ticket */}
@@ -441,41 +440,116 @@ export default function GameRoom() {
                 )}
             </AnimatePresence>
 
-            {/* Winner Modal */}
+            {/* Winner Modal — hiển thị phiếu + verify số */}
             <AnimatePresence>
                 {
-                    gameStatus === 'ended' && winner && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-red-950/90 backdrop-blur-xl"
-                        >
-                            <motion.div
-                                initial={{ scale: 0.8, y: 20 }}
-                                animate={{ scale: 1, y: 0 }}
-                                className="max-w-md w-full glass-card p-10 text-center border-yellow-400 shadow-[0_0_100px_rgba(245,158,11,0.3)]"
-                            >
-                                <Trophy size={80} className="mx-auto mb-6 text-yellow-500 drop-shadow-lg" />
-                                <h2 className="text-6xl font-black text-white uppercase tracking-tighter mb-2 italic">KINH RỒI!</h2>
-                                <p className="text-2xl font-black text-yellow-500 mb-10 tracking-tight uppercase">Chúc mừng {winner.name}!</p>
+                    gameStatus === 'ended' && winner && (() => {
+                        const winnerMarkedSet = new Set(winner.markedNumbers);
+                        // Verify: tất cả số đánh đều nằm trong lịch sử xổ
+                        const invalidNumbers = winner.markedNumbers.filter(n => !drawnNumbersSet.has(n));
+                        const isVerified = invalidNumbers.length === 0;
 
-                                {isHost ? (
-                                    <button
-                                        onClick={() => resetGame()}
-                                        className="w-full btn-primary !text-lg !shadow-[0_4px_0_#92400e]"
-                                    >
-                                        <RotateCcw size={20} className="mr-2" /> CHƠI VÁN MỚI
-                                    </button>
-                                ) : (
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                                        <p className="text-white/60 text-sm italic">Đang chờ chủ phòng bắt đầu ván mới...</p>
+                        return (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="fixed inset-0 z-[100] flex items-start justify-center px-4 py-6 bg-red-950/90 backdrop-blur-xl overflow-y-auto scrollbar-hide"
+                            >
+                                <motion.div
+                                    initial={{ scale: 0.8, y: 20 }}
+                                    animate={{ scale: 1, y: 0 }}
+                                    className="max-w-lg w-full glass-card p-5 sm:p-8 text-center border-yellow-400 shadow-[0_0_100px_rgba(245,158,11,0.3)]"
+                                >
+                                    <Trophy size={48} className="mx-auto mb-3 text-yellow-500 drop-shadow-lg" />
+                                    <h2 className="text-3xl sm:text-5xl font-black text-white uppercase tracking-tighter mb-1 italic">KINH RỒI!</h2>
+                                    <p className="text-lg sm:text-xl font-black text-yellow-500 mb-3 tracking-tight uppercase">Chúc mừng {winner.name}!</p>
+
+                                    {/* Verify Badge */}
+                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black mb-4 ${isVerified
+                                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                                        : "bg-red-500/20 text-red-400 border border-red-500/30"
+                                        }`}>
+                                        {isVerified ? (
+                                            <><ShieldCheck size={16} /> XÁC NHẬN HỢP LỆ</>
+                                        ) : (
+                                            <><ShieldAlert size={16} /> PHÁT HIỆN {invalidNumbers.length} SỐ CHƯA XỔ</>
+                                        )}
                                     </div>
-                                )}
+
+                                    {/* Phiếu của người thắng */}
+                                    {winner.ticket && (
+                                        <div className="mb-4 -mx-3 sm:-mx-6">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                                                Phiếu của {winner.name}
+                                            </p>
+                                            <LotoCard
+                                                ticket={winner.ticket}
+                                                drawnNumbers={drawnNumbersSet}
+                                                currentNumber={null}
+                                                markedNumbers={winnerMarkedSet}
+                                                readOnly
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Số đã đánh */}
+                                    <div className="mb-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">
+                                            Các số đã đánh ({winner.markedNumbers.length} số)
+                                        </p>
+                                        <div className="flex flex-wrap gap-1 justify-center">
+                                            {winner.markedNumbers.sort((a, b) => a - b).map(num => (
+                                                <span
+                                                    key={num}
+                                                    className={`w-7 h-7 rounded-full border flex items-center justify-center text-[10px] font-black ${drawnNumbersSet.has(num)
+                                                        ? "bg-green-500/20 border-green-500/40 text-green-400"
+                                                        : "bg-red-500/20 border-red-500/40 text-red-400 animate-pulse"
+                                                        }`}
+                                                >
+                                                    {num < 10 ? `0${num}` : num}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Lịch sử xổ số */}
+                                    <div className="mb-4">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mb-2">
+                                            Lịch sử xổ số ({drawnNumbers.length} số)
+                                        </p>
+                                        <div className="flex flex-wrap gap-1 justify-center">
+                                            {drawnNumbers.map((num, idx) => (
+                                                <span
+                                                    key={idx}
+                                                    className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-black border ${winnerMarkedSet.has(num)
+                                                        ? "bg-red-500/30 border-red-500/50 text-red-300 ring-1 ring-red-500/40"
+                                                        : "bg-white/5 border-white/10 text-white/40"
+                                                        }`}
+                                                >
+                                                    {num < 10 ? `0${num}` : num}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {isHost ? (
+                                        <button
+                                            onClick={() => resetGame()}
+                                            className="w-full btn-primary !text-lg !shadow-[0_4px_0_#92400e]"
+                                        >
+                                            <RotateCcw size={20} className="mr-2" /> CHƠI VÁN MỚI
+                                        </button>
+                                    ) : (
+                                        <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
+                                            <p className="text-white/60 text-sm italic">Đang chờ chủ phòng bắt đầu ván mới...</p>
+                                        </div>
+                                    )}
+                                </motion.div>
                             </motion.div>
-                        </motion.div>
-                    )
+                        );
+                    })()
                 }
-            </AnimatePresence >
+            </AnimatePresence>
         </div >
     );
 }
