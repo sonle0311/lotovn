@@ -38,18 +38,27 @@ export interface ChatMessage {
 function presenceToPlayers(presenceState: Record<string, unknown[]>): Player[] {
     const players: Player[] = [];
     for (const [, presences] of Object.entries(presenceState)) {
-        for (const presence of presences) {
-            const p = presence as Record<string, unknown>;
-            players.push({
-                id: (p.name as string) || '',
-                name: (p.name as string) || '',
-                isHost: (p.isHost as boolean) || false,
-                status: (p.status as Player['status']) || 'waiting',
-                isWaitingKinh: (p.isWaitingKinh as boolean) || false,
-                waitingNumbers: (p.waitingNumbers as number[]) || undefined,
-                lastSeen: Date.now(),
-            });
-        }
+        if (!presences || presences.length === 0) continue;
+
+        // Ưu tiên session quan trọng hơn nếu có duplicate
+        // won (0) > playing (1) > waiting (2)
+        const sortedPresences = [...presences].sort((a: any, b: any) => {
+            const priority = { 'won': 0, 'playing': 1, 'waiting': 2 };
+            const aPrio = priority[a.status as keyof typeof priority] ?? 3;
+            const bPrio = priority[b.status as keyof typeof priority] ?? 3;
+            return aPrio - bPrio;
+        });
+
+        const p = sortedPresences[0] as Record<string, unknown>;
+        players.push({
+            id: (p.name as string) || '',
+            name: (p.name as string) || '',
+            isHost: (p.isHost as boolean) || false,
+            status: (p.status as Player['status']) || 'waiting',
+            isWaitingKinh: (p.isWaitingKinh as boolean) || false,
+            waitingNumbers: (p.waitingNumbers as number[]) || undefined,
+            lastSeen: Date.now(),
+        });
     }
     return players;
 }
