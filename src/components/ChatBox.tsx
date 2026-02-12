@@ -35,15 +35,15 @@ const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName, cha
     const isCoolingDown = chatCooldown > 0;
 
     return (
-        <div className="glass-card flex flex-col h-full border-white/5 overflow-hidden">
-            <div className="bg-white/5 p-3 sm:p-4 flex items-center gap-2 border-b border-white/10 relative z-10">
+        <div className="glass-card flex flex-col h-full max-h-[400px] border-white/5 overflow-hidden">
+            <div className="bg-white/5 p-2 sm:p-3 flex items-center gap-2 border-b border-white/10 relative z-10">
                 <MessageSquare size={16} className="text-yellow-500" />
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80">Trò chuyện</h3>
             </div>
 
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar relative"
+                className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3 custom-scrollbar relative"
             >
                 <div className="absolute inset-0 viet-pattern opacity-5 pointer-events-none" />
                 <AnimatePresence initial={false}>
@@ -81,8 +81,8 @@ const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName, cha
                     type="submit"
                     disabled={!text.trim() || isCoolingDown}
                     className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all btn-tactile shadow-[0_4px_0_#92400e] active:shadow-none ${isCoolingDown
-                            ? 'bg-white/10 cursor-not-allowed opacity-50'
-                            : 'bg-yellow-500 hover:bg-yellow-400 disabled:opacity-30'
+                        ? 'bg-white/10 cursor-not-allowed opacity-50'
+                        : 'bg-yellow-500 hover:bg-yellow-400 disabled:opacity-30'
                         }`}
                     title={isCoolingDown ? `Chờ ${chatCooldown}s` : 'Gửi tin nhắn'}
                 >

@@ -244,7 +244,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 setWinner(null);
                 setMarkedNumbers(new Set());
             })
-            .on('broadcast', { event: 'game_reset' }, ({ payload }) => {
+            .on('broadcast', { event: 'game_reset' }, () => {
                 setGameStatus('waiting');
                 gameStatusRef.current = 'waiting';
                 setDrawnNumbers([]);
@@ -253,10 +253,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 setMarkedNumbers(new Set());
                 setWaitingKinhPlayer(null);
                 setMessages([]);
-                // Chỉ gen vé mới nếu KHÔNG giữ vé
-                if (!payload?.keepTicket) {
-                    setMyTicket(generateTicket());
-                }
+                // Giữ vé hiện tại (player tự đổi bằng regenerateTicket nếu muốn)
             })
             .on('broadcast', { event: 'number_draw' }, ({ payload }) => {
                 setDrawnNumbers(prev => [...prev, payload.number]);
@@ -415,6 +412,17 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     // ─── Actions ────────────────────────────────────────────
     const startGame = useCallback(() => {
         if (!isHost) return;
+
+        // Auto-reset nếu game đã ended (merge reset vào start)
+        if (gameStatusRef.current === 'ended') {
+            setDrawnNumbers([]);
+            setCurrentNumber(null);
+            setWinner(null);
+            setMarkedNumbers(new Set());
+            setWaitingKinhPlayer(null);
+            setMessages([]);
+        }
+
         channelRef.current?.send({
             type: 'broadcast',
             event: 'game_start',
@@ -525,12 +533,12 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         });
     }, []);
 
-    const resetGame = useCallback((keepTicket = false) => {
+    const resetGame = useCallback(() => {
         if (!isHost) return;
         channelRef.current?.send({
             type: 'broadcast',
             event: 'game_reset',
-            payload: { keepTicket },
+            payload: {},
         });
         // Locally reset for host (broadcast doesn't echo to sender)
         setGameStatus('waiting');
@@ -541,10 +549,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         setMarkedNumbers(new Set());
         setWaitingKinhPlayer(null);
         setMessages([]); // Dọn dẹp chat khi reset
-        // Chỉ gen vé mới nếu KHÔNG giữ vé
-        if (!keepTicket) {
-            setMyTicket(generateTicket());
-        }
+        // Giữ vé hiện tại (host cũng tự đổi bằng regenerateTicket nếu muốn)
     }, [isHost]);
 
     const regenerateTicket = useCallback(() => {

@@ -11,7 +11,7 @@ import AdminControls from "@/components/AdminControls";
 import { useEffect, useState, useMemo } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle } from "lucide-react";
+import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const FUNNY_PHRASES = [
@@ -355,6 +355,34 @@ export default function GameRoom() {
                                         >
                                             <Shuffle size={18} className="animate-pulse" />
                                             <span>Đổi Vé</span>
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Nút Giữ/Đổi Vé - Chỉ hiện khi game kết thúc */}
+                                {gameStatus === 'ended' && (
+                                    <div className="flex gap-3 justify-center">
+                                        <button
+                                            onClick={() => {
+                                                regenerateTicket();
+                                                toast.success("Đã đổi vé mới!", {
+                                                    icon: "🎫",
+                                                    description: "Chúc bạn may mắn ván sau!",
+                                                });
+                                            }}
+                                            className="px-6 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-yellow-500 font-bold text-sm transition-all flex items-center gap-2 btn-tactile"
+                                            aria-label="Đổi vé mới"
+                                        >
+                                            <Shuffle size={18} />
+                                            <span>Đổi Vé Mới</span>
+                                        </button>
+                                        <button
+                                            disabled
+                                            className="px-6 py-2.5 bg-green-500/10 border border-green-500/30 rounded-xl text-green-500 font-bold text-sm flex items-center gap-2 opacity-60 cursor-not-allowed"
+                                            aria-label="Giữ vé cũ"
+                                        >
+                                            <Check size={18} />
+                                            <span>Giữ Vé Cũ</span>
                                         </button>
                                     </div>
                                 )}

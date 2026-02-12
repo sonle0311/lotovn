@@ -49,9 +49,9 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
     if (!ticket) return null;
 
     return (
-        <div className="w-full max-w-2xl mx-auto px-1 sm:px-4">
+        <div className="w-full max-w-xl mx-auto px-1 sm:px-4">
             <div
-                className="paper-ticket w-full border-[3px] sm:border-[6px] border-black rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden transition-all"
+                className="paper-ticket w-full border-[2px] sm:border-[4px] border-black rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden transition-all"
                 style={{ backgroundColor: ticket.color }}
             >
                 {/* Decorative Elements */}
@@ -59,7 +59,7 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-yellow-500/10 blur-3xl pointer-events-none" />
 
                 {/* Main Ticket Header */}
-                <div className="relative z-10 flex justify-between items-center py-4 sm:py-6 px-4 sm:px-8 border-b-[3px] sm:border-b-[4px] border-black/80 bg-black/5">
+                <div className="relative z-10 flex justify-between items-center py-2 sm:py-3 px-3 sm:px-4 border-b-[2px] sm:border-b-[3px] border-black/80 bg-black/5">
                     <div className="flex flex-col">
                         <span className="text-[8px] sm:text-[10px] font-black text-black/60 uppercase tracking-[0.2em] mb-0.5 sm:mb-1">PREMIUM LOTO VIỆT NAM</span>
                         <h2 className="text-xl sm:text-3xl font-black text-black uppercase leading-none tracking-tighter">
@@ -72,7 +72,7 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                     </div>
                 </div>
 
-                <div className="p-2 sm:p-6 space-y-3 sm:space-y-4 relative z-10">
+                <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 relative z-10">
                     {ticket.frames.map((frame, frameIndex) => (
                         <div
                             key={`${ticket.id}-frame-${frameIndex}`}
@@ -99,7 +99,7 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                 </div>
 
                 {/* Footer info */}
-                <div className="py-3 sm:py-5 px-4 sm:px-8 border-t-[3px] sm:border-t-[4px] border-black/80 bg-black/5 flex justify-between items-center relative z-10">
+                <div className="py-2 sm:py-3 px-3 sm:px-4 border-t-[2px] sm:border-t-[3px] border-black/80 bg-black/5 flex justify-between items-center relative z-10">
                     <span className="text-[7px] sm:text-[9px] font-black text-black/40 uppercase tracking-widest font-mono">ID: {ticket.id} • LotoTet Premium</span>
                     <div className="flex gap-2 sm:gap-4 grayscale opacity-40">
                         <div className="w-3 h-3 sm:w-5 sm:h-5 rounded-full border-2 border-black"></div>
