@@ -1,0 +1,23 @@
+{
+    "name": "LotoVN - Lô Tô Việt Nam Online",
+    "short_name": "LotoVN",
+    "description": "Trò chơi Lô Tô đa người chơi phong cách lễ hội Việt Nam hiện đại",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#450a0a",
+    "theme_color": "#7f1d1d",
+    "orientation": "portrait",
+    "lang": "vi",
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "games",
+        "entertainment"
+    ]
+}

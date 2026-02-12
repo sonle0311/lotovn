@@ -11,7 +11,7 @@ import AdminControls from "@/components/AdminControls";
 import { useEffect, useState, useMemo } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Share2, Trophy, BellRing, RotateCcw } from "lucide-react";
+import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle } from "lucide-react";
 import { toast } from "sonner";
 
 const FUNNY_PHRASES = [
@@ -58,6 +58,7 @@ export default function GameRoom() {
         declareWaitingKinh,
         toggleMark,
         resetGame,
+        regenerateTicket,
     } = useGameRoom(roomId, playerName);
 
     const [hasDeclaredWin, setHasDeclaredWin] = useState(false);
@@ -337,6 +338,26 @@ export default function GameRoom() {
                                         onMark={toggleMark}
                                     />
                                 </div>
+
+                                {/* Nút Đổi Vé - Chỉ hiện khi đang chờ */}
+                                {gameStatus === 'waiting' && (
+                                    <div className="flex justify-center">
+                                        <button
+                                            onClick={() => {
+                                                regenerateTicket();
+                                                toast.success("Đã đổi vé mới!", {
+                                                    icon: "🎫",
+                                                    description: "Chúc bạn may mắn!",
+                                                });
+                                            }}
+                                            className="px-6 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-yellow-500 font-bold text-sm transition-all flex items-center gap-2 btn-tactile"
+                                            aria-label="Đổi vé mới"
+                                        >
+                                            <Shuffle size={18} className="animate-pulse" />
+                                            <span>Đổi Vé</span>
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Mobile Condensed Chat - Show at bottom of game tab */}
                                 <div className="lg:hidden w-full h-[200px] mt-2 mb-24">

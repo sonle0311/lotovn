@@ -244,8 +244,19 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 setWinner(null);
                 setMarkedNumbers(new Set());
             })
-            .on('broadcast', { event: 'game_reset' }, () => {
-                handleReset();
+            .on('broadcast', { event: 'game_reset' }, ({ payload }) => {
+                setGameStatus('waiting');
+                gameStatusRef.current = 'waiting';
+                setDrawnNumbers([]);
+                setCurrentNumber(null);
+                setWinner(null);
+                setMarkedNumbers(new Set());
+                setWaitingKinhPlayer(null);
+                setMessages([]);
+                // Chỉ gen vé mới nếu KHÔNG giữ vé
+                if (!payload?.keepTicket) {
+                    setMyTicket(generateTicket());
+                }
             })
             .on('broadcast', { event: 'number_draw' }, ({ payload }) => {
                 setDrawnNumbers(prev => [...prev, payload.number]);
@@ -514,12 +525,12 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         });
     }, []);
 
-    const resetGame = useCallback(() => {
+    const resetGame = useCallback((keepTicket = false) => {
         if (!isHost) return;
         channelRef.current?.send({
             type: 'broadcast',
             event: 'game_reset',
-            payload: {},
+            payload: { keepTicket },
         });
         // Locally reset for host (broadcast doesn't echo to sender)
         setGameStatus('waiting');
@@ -529,9 +540,28 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         setWinner(null);
         setMarkedNumbers(new Set());
         setWaitingKinhPlayer(null);
-        setMyTicket(generateTicket());
         setMessages([]); // Dọn dẹp chat khi reset
+        // Chỉ gen vé mới nếu KHÔNG giữ vé
+        if (!keepTicket) {
+            setMyTicket(generateTicket());
+        }
     }, [isHost]);
+
+    const regenerateTicket = useCallback(() => {
+        // Chỉ cho phép đổi vé khi đang chờ
+        if (gameStatusRef.current !== 'waiting') return;
+
+        // Tạo vé mới
+        const newTicket = generateTicket();
+        setMyTicket(newTicket);
+
+        // Broadcast notification (optional, để players khác biết)
+        channelRef.current?.send({
+            type: 'broadcast',
+            event: 'ticket_changed',
+            payload: { playerName },
+        });
+    }, [playerName]);
 
     return {
         players,
@@ -553,5 +583,6 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         declareWaitingKinh,
         toggleMark,
         resetGame,
+        regenerateTicket,
     };
 };

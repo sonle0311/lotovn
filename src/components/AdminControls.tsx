@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 interface AdminControlsProps {
     onStart: () => void;
     onDraw: (num: number) => void;
-    onReset: () => void;
+    onReset: (keepTicket?: boolean) => void;
     gameStatus: 'waiting' | 'playing' | 'ended';
     drawnNumbers: number[];
 }
@@ -15,6 +15,7 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
     const [autoDraw, setAutoDraw] = useState(false);
     const [drawInterval, setDrawInterval] = useState(5); // seconds
     const [countdown, setCountdown] = useState(0);
+    const [keepTicket, setKeepTicket] = useState(false);
 
     useEffect(() => {
         if (autoDraw && gameStatus === 'playing') {
@@ -101,15 +102,26 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
                     </>
                 )}
 
-                <button
-                    onClick={() => {
-                        setAutoDraw(false);
-                        onReset();
-                    }}
-                    className="col-span-2 mt-2 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors"
-                >
-                    <RotateCcw size={12} /> Làm mới game (Reset)
-                </button>
+                <div className="col-span-2 mt-2 flex flex-col gap-2">
+                    <button
+                        onClick={() => {
+                            setAutoDraw(false);
+                            onReset(keepTicket);
+                        }}
+                        className="flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors"
+                    >
+                        <RotateCcw size={12} /> Làm mới game (Reset)
+                    </button>
+                    <label className="flex items-center gap-2 text-[9px] font-bold text-white/50 hover:text-white/70 transition-colors cursor-pointer justify-center">
+                        <input
+                            type="checkbox"
+                            checked={keepTicket}
+                            onChange={(e) => setKeepTicket(e.target.checked)}
+                            className="w-3 h-3 accent-yellow-500 cursor-pointer"
+                        />
+                        <span>Giữ vé cũ (chơi tiếp)</span>
+                    </label>
+                </div>
             </div>
 
             <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/10">
