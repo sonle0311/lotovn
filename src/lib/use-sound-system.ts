@@ -3,8 +3,21 @@ import { useRef, useCallback, useEffect } from "react";
 import { formatNumberVietnamese } from "./gameLogic";
 
 /**
+ * Build URL for the local TTS proxy endpoint.
+ * The API route fetches Google Translate TTS server-side, bypassing CORS
+ * and bot-protection headers that block direct browser requests.
+ */
+function ttsProxyUrl(text: string): string {
+  return `/api/tts?text=${encodeURIComponent(text)}`;
+}
+
+/**
  * useSoundSystem — encapsulates Web Speech API (TTS) and Web Audio API (SFX).
  * All browser-API access is SSR-safe (guarded with typeof window checks).
+ *
+ * TTS strategy (priority order):
+ *   1. Native vi-VN system voice via Web Speech API (best quality)
+ *   2. Google Translate TTS via Audio element (fallback — no system vi voice)
  *
  * @param isMuted - when true, all audio output is suppressed immediately.
  * @returns { announceNumber, playDrawBeep, playWinFanfare }
@@ -14,6 +27,8 @@ export function useSoundSystem(isMuted: boolean) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   // Cached vi-VN SpeechSynthesisVoice (populated async on some browsers)
   const viVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  // Audio element used for Google TTS fallback — track to cancel previous before next
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   /**
    * Returns the shared AudioContext, creating it on first call and resuming
@@ -35,8 +50,8 @@ export function useSoundSystem(isMuted: boolean) {
 
   /**
    * Selects the best available vi-VN voice from the SpeechSynthesis API.
-   * Falls back to any "vi" prefixed voice, then null (browser default).
-   * Uses onvoiceschanged because getVoices() may return [] synchronously
+   * Falls back to any "vi" prefixed voice, then null (triggers Google TTS fallback).
+   * Uses addEventListener because getVoices() may return [] synchronously
    * in Chrome until the voices list is asynchronously populated.
    */
   useEffect(() => {
@@ -51,7 +66,6 @@ export function useSoundSystem(isMuted: boolean) {
     };
 
     pick();
-    // addEventListener avoids clobbering other potential handlers on the singleton
     speechSynthesis.addEventListener("voiceschanged", pick);
 
     return () => {
@@ -64,29 +78,46 @@ export function useSoundSystem(isMuted: boolean) {
     return () => {
       audioCtxRef.current?.close();
       audioCtxRef.current = null;
+      // Stop any in-flight Google TTS audio
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+      }
     };
   }, []);
 
   /**
-   * Reads the Vietnamese name portion from formatNumberVietnamese output
-   * (e.g. "Hai mươi ba" from "Hai mươi ba – 23") and speaks it via TTS.
-   * Cancels any ongoing utterance before starting the new one.
+   * Announces the Vietnamese number name via TTS.
+   * Strategy:
+   *   - If native vi-VN voice found → Web Speech API (no network needed)
+   *   - Otherwise → Google Translate TTS Audio element (cross-platform fallback)
    */
   const announceNumber = useCallback(
     (n: number) => {
-      if (isMuted || typeof window === "undefined" || !window.speechSynthesis) return;
+      if (isMuted || typeof window === "undefined") return;
 
-      speechSynthesis.cancel();
+      // Extract "Hai mươi ba" from "Hai mươi ba – 23"
+      const text = formatNumberVietnamese(n).split(" – ")[0];
 
-      // Split on the em-dash separator produced by formatNumberVietnamese
-      const text = formatNumberVietnamese(n).split(" – ")[0]; // e.g. "Hai mươi ba"
-
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.lang = "vi-VN";
-      utt.rate = 0.9; // slightly slower for clarity
-      if (viVoiceRef.current) utt.voice = viVoiceRef.current;
-
-      speechSynthesis.speak(utt);
+      if (viVoiceRef.current && window.speechSynthesis) {
+        // ── Path 1: native vi-VN system voice ────────────────────────────
+        speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(text);
+        utt.lang = "vi-VN";
+        utt.rate = 0.9;
+        utt.voice = viVoiceRef.current;
+        speechSynthesis.speak(utt);
+      } else {
+        // ── Path 2: Google Translate TTS fallback (no vi-VN system voice) ─
+        // Stop previous audio immediately so numbers don't stack up
+        if (ttsAudioRef.current) {
+          ttsAudioRef.current.pause();
+          ttsAudioRef.current.src = "";
+        }
+        const audio = new Audio(ttsProxyUrl(text));
+        ttsAudioRef.current = audio;
+        audio.play().catch(() => {/* silently ignore autoplay policy errors */});
+      }
     },
     [isMuted]
   );
