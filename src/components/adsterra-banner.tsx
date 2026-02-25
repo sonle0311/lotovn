@@ -90,12 +90,14 @@ export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBann
                 <X className="w-2.5 h-2.5" />
             </button>
 
+            {/* sandbox: NO allow-same-origin (combining with allow-scripts = sandbox escape warning).
+                allow-top-navigation-by-user-activation = ad click opens new tab correctly. */}
             <iframe
                 srcDoc={adHTML}
                 style={{ width, height, border: "none", overflow: "hidden", display: "block" }}
                 scrolling="no"
                 title="Quảng cáo"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
             />
         </div>
     );
@@ -151,7 +153,7 @@ export function AdsterraSocialBar({ className = "" }: { className?: string }) {
                 style={{ width: "100%", height: 60, border: "none", overflow: "hidden" }}
                 scrolling="no"
                 title="Quảng cáo"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
             />
         </div>
     );
