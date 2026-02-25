@@ -72,19 +72,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const [drawnNumbers, setDrawnNumbers] = useState<number[]>([]);
     const [currentNumber, setCurrentNumber] = useState<number | null>(null);
     const [gameStatus, setGameStatus] = useState<'waiting' | 'playing' | 'ended'>('waiting');
-    const [myTicket, setMyTicket] = useState<LotoTicket | null>(() => {
-        if (typeof window !== 'undefined') {
-            const cached = localStorage.getItem(`loto-ticket-${roomId}`);
-            if (cached) {
-                try {
-                    return JSON.parse(cached);
-                } catch (e) {
-                    console.error("Failed to parse cached ticket", e);
-                }
-            }
-        }
-        return generateTicket();
-    });
+    const [myTicket, setMyTicket] = useState<LotoTicket | null>(null);
     const [isRoomFull, setIsRoomFull] = useState(false);
     const [chatCooldown, setChatCooldown] = useState(0);
 
@@ -98,26 +86,48 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set());
 
     // Auto-mark: automatically mark drawn numbers on ticket
-    const [autoMarkEnabled, setAutoMarkEnabled] = useState<boolean>(() =>
-        typeof window !== "undefined" && localStorage.getItem("loto-auto-mark") === "true"
-    );
+    const [autoMarkEnabled, setAutoMarkEnabled] = useState<boolean>(false);
     // Keep ticket preference: skip auto-regeneration between rounds
-    const [keepTicketPref, setKeepTicketPref] = useState<boolean>(() =>
-        typeof window !== "undefined" && localStorage.getItem("loto-keep-ticket") === "true"
-    );
+    const [keepTicketPref, setKeepTicketPref] = useState<boolean>(false);
     // Session win counter persisted to localStorage
-    const [sessionWins, setSessionWins] = useState<number>(() => {
-        if (typeof window === "undefined") return 0;
-        try {
-            const s = localStorage.getItem(`loto-session-${roomId}-${playerName}`);
-            return s ? (JSON.parse(s).wins || 0) : 0;
-        } catch { return 0; }
-    });
+    const [sessionWins, setSessionWins] = useState<number>(0);
 
     const channelRef = useRef<RealtimeChannel | null>(null);
     const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const gameStatusRef = useRef<'waiting' | 'playing' | 'ended'>('waiting');
     const waitingKinhTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Hydrate myTicket from localStorage (client-only, SSR-safe)
+    useEffect(() => {
+        const cached = localStorage.getItem(`loto-ticket-${roomId}`);
+        if (cached) {
+            try {
+                setMyTicket(JSON.parse(cached));
+                return;
+            } catch {
+                // fall through to generate
+            }
+        }
+        setMyTicket(generateTicket());
+    }, [roomId]);
+
+    // Hydrate autoMarkEnabled from localStorage (client-only, SSR-safe)
+    useEffect(() => {
+        setAutoMarkEnabled(localStorage.getItem("loto-auto-mark") === "true");
+    }, []);
+
+    // Hydrate keepTicketPref from localStorage (client-only, SSR-safe)
+    useEffect(() => {
+        setKeepTicketPref(localStorage.getItem("loto-keep-ticket") === "true");
+    }, []);
+
+    // Hydrate sessionWins from localStorage (client-only, SSR-safe)
+    useEffect(() => {
+        try {
+            const s = localStorage.getItem(`loto-session-${roomId}-${playerName}`);
+            setSessionWins(s ? (JSON.parse(s).wins || 0) : 0);
+        } catch { /* keep 0 */ }
+    }, [roomId, playerName]);
 
     // Resolve host authority from DB on mount — replaces URL ?host=true spoof
     useEffect(() => {
@@ -170,13 +180,6 @@ export const useGameRoom = (roomId: string, playerName: string) => {
             return next;
         });
     }, [roomId, playerName]);
-
-    // Ensure myTicket exists
-    useEffect(() => {
-        if (!myTicket) {
-            setMyTicket(generateTicket());
-        }
-    }, [myTicket]);
 
     // Auto-mark: add drawn numbers matching current ticket to markedNumbers Set
     useEffect(() => {

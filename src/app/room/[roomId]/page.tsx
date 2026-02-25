@@ -9,10 +9,12 @@ import ChatBox from "@/components/ChatBox";
 import PlayerList from "@/components/PlayerList";
 import AdminControls from "@/components/AdminControls";
 import NumberPoolGrid from "@/components/number-pool-grid";
+import ShopeeAffiliateCTA from "@/components/shopee-affiliate-cta";
+import { AdsterraBanner } from "@/components/adsterra-banner";
 import { useEffect, useState, useMemo } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 const FUNNY_PHRASES = [
@@ -395,7 +397,7 @@ export default function GameRoom() {
 
                                 {/* Nút Đổi Vé - Chỉ hiện khi đang chờ */}
                                 {gameStatus === 'waiting' && (
-                                    <div className="flex justify-center">
+                                    <div className="flex flex-col items-center gap-3">
                                         <button
                                             onClick={() => handleRegenerateTicket("Chúc bạn may mắn!")}
                                             className="px-6 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-xl text-yellow-500 font-bold text-sm transition-all flex items-center gap-2 btn-tactile"
@@ -404,6 +406,10 @@ export default function GameRoom() {
                                             <Shuffle size={18} className="animate-pulse" />
                                             <span>Đổi Vé</span>
                                         </button>
+
+                                        {/* Shopee affiliate + Adsterra — chỉ hiện khi chờ game bắt đầu */}
+                                        <ShopeeAffiliateCTA variant="waiting" />
+                                        <AdsterraBanner size="mobile" />
                                     </div>
                                 )}
 
@@ -478,9 +484,16 @@ export default function GameRoom() {
                             className={`w-full max-w-sm py-5 rounded-2xl text-2xl font-black italic tracking-tighter transition-all duration-500 pointer-events-auto shadow-2xl
                                 ${canKinh
                                     ? "bg-yellow-500 text-red-950 shadow-[0_0_40px_rgba(245,158,11,0.6),0_8px_0_#92400e] animate-pulse border-2 border-white/60"
-                                    : "bg-red-900/60 text-white/40 border border-white/10 cursor-not-allowed backdrop-blur-xl"}`}
+                                    : "bg-black/50 text-white/40 border-2 border-white/20 cursor-not-allowed backdrop-blur-sm"}`}
                         >
-                            KINH!
+                            {canKinh ? (
+                                "KINH!"
+                            ) : (
+                                <span className="flex items-center justify-center gap-2">
+                                    <Lock className="w-5 h-5 opacity-60" />
+                                    <span>KINH!</span>
+                                </span>
+                            )}
                         </motion.button>
                     </motion.div>
                 )}
@@ -622,6 +635,11 @@ export default function GameRoom() {
                                     </div>
                                 );
                             })()}
+
+                            {/* Shopee affiliate CTA — natural pause sau khi thắng */}
+                            <div className="mb-3">
+                                <ShopeeAffiliateCTA variant="winner" />
+                            </div>
 
                             {isHost ? (
                                 <button

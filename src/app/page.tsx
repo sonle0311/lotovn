@@ -6,6 +6,8 @@ import { createRoom } from "@/lib/room-service";
 import { Coffee, Play, Users, Trophy, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import LandingBackground from "@/components/LandingBackground";
+import ShopeeAffiliateCTA from "@/components/shopee-affiliate-cta";
+import { AdsterraBanner } from "@/components/adsterra-banner";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -208,13 +210,20 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Footer credit */}
+        {/* Adsterra banner — chỉ hiện trên desktop (leaderboard 728x90) */}
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 hidden lg:flex justify-center pointer-events-auto">
+          <AdsterraBanner size="leaderboard" />
+        </div>
+
+        {/* Footer credit + Shopee affiliate */}
         <footer className="absolute bottom-4 w-full flex flex-col md:flex-row items-center justify-center gap-2 text-[10px] sm:text-xs font-bold text-white/20 uppercase tracking-widest md:tracking-[0.3em] pointer-events-none mix-blend-screen px-4 text-center">
           <span>Premium Loto • Tet 2026 Edition</span>
           <span className="hidden md:inline text-yellow-500">•</span>
           <a href="https://www.sonlt.dev/" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-400 transition-colors cursor-pointer pointer-events-auto flex items-center gap-1">
             Made with <span className="text-red-500 animate-pulse">❤</span> by <span className="font-black text-yellow-500">SonLT</span>
           </a>
+          <span className="hidden md:inline text-yellow-500/40">•</span>
+          <ShopeeAffiliateCTA variant="landing" />
         </footer>
       </main>
     </>
