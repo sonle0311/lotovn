@@ -80,10 +80,11 @@ const ChatBox = memo(function ChatBox({ messages, onSendMessage, playerName, cha
                 <button
                     type="submit"
                     disabled={!text.trim() || isCoolingDown}
-                    className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all btn-tactile shadow-[0_4px_0_#92400e] active:shadow-none ${isCoolingDown
+                    className={`w-10 h-10 shrink-0 rounded-2xl flex items-center justify-center transition-all btn-tactile shadow-[0_4px_0_#92400e] active:shadow-none ${isCoolingDown
                         ? 'bg-white/10 cursor-not-allowed opacity-50'
                         : 'bg-yellow-500 hover:bg-yellow-400 disabled:opacity-30'
                         }`}
+                    aria-label={isCoolingDown ? `Chờ ${chatCooldown}s` : 'Gửi tin nhắn'}
                     title={isCoolingDown ? `Chờ ${chatCooldown}s` : 'Gửi tin nhắn'}
                 >
                     {isCoolingDown ? (

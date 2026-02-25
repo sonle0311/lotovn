@@ -317,7 +317,7 @@ export default function GameRoom() {
             {/* Main Content Area */}
             <main className="flex-1 max-w-[1600px] mx-auto w-full p-2 sm:p-6 pb-24 relative z-10">
                 {/* Mobile Tabs - Persistent at the top of content */}
-                <div role="tablist" aria-label="Điều hướng game" className="lg:hidden mb-4 w-full flex bg-black/40 p-1 rounded-xl backdrop-blur-md border border-white/10 shadow-lg sticky top-[72px] z-40">
+                <div role="tablist" aria-label="Điều hướng game" className="lg:hidden mb-4 w-full flex bg-black/40 p-1 rounded-xl backdrop-blur-md border border-white/10 shadow-lg sticky top-[65px] z-40">
                     {(['game', 'players', 'chat'] as const).map((tab) => (
                         <button
                             key={tab}
@@ -337,7 +337,7 @@ export default function GameRoom() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
 
                     {/* 1. Left Sidebar: Host Controls + Number Drawing + Player List */}
-                    <div className="lg:col-span-3 flex flex-col gap-4 sm:gap-6 order-2 lg:order-1">
+                    <div className={`lg:col-span-3 flex flex-col gap-4 sm:gap-6 order-2 lg:order-1 ${activeTab === 'players' || activeTab === 'chat' ? "hidden lg:flex" : "flex"}`}>
                         {/* Host Controls Section */}
                         {isHost && (
                             <div className="w-full">
@@ -352,7 +352,7 @@ export default function GameRoom() {
                         )}
 
                         {/* Lồng cầu — hiển thị cho TẤT CẢ người chơi */}
-                        <div className={`${activeTab === 'chat' ? "hidden" : "flex"} lg:flex flex-col gap-4 sm:gap-6`}>
+                        <div className="flex flex-col gap-4 sm:gap-6">
                             <NumberDrawing currentNumber={currentNumber} drawnNumbers={drawnNumbers} />
                             <NumberPoolGrid drawnNumbers={drawnNumbers} />
                             <div className="hidden lg:block h-full">
@@ -372,17 +372,18 @@ export default function GameRoom() {
                                     <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Phiếu của bạn</span>
                                     <button
                                         onClick={toggleAutoMark}
-                                        className="flex items-center gap-2"
+                                        className="flex items-center gap-2 min-h-[44px] min-w-[44px] justify-end px-1 -mr-1"
                                         aria-label={autoMarkEnabled ? "Tắt tự động đánh" : "Bật tự động đánh"}
+                                        aria-pressed={autoMarkEnabled}
                                     >
-                                        <span className="text-[9px] font-black text-white/30">Tự động đánh</span>
-                                        <div className={`w-8 h-4 rounded-full transition-colors duration-200 relative ${autoMarkEnabled ? "bg-yellow-500" : "bg-white/10"}`}>
-                                            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-200 ${autoMarkEnabled ? "left-[18px]" : "left-0.5"}`} />
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tự động đánh</span>
+                                        <div className={`w-10 h-5 rounded-full transition-colors duration-200 relative border ${autoMarkEnabled ? "bg-yellow-500 border-yellow-400" : "bg-white/10 border-white/10"}`}>
+                                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-200 ${autoMarkEnabled ? "left-[22px]" : "left-0.5"}`} />
                                         </div>
                                     </button>
                                 </div>
 
-                                <div className="w-full overflow-x-auto pb-1 scrollbar-none flex justify-center">
+                                <div className="w-full overflow-x-auto pb-1 scrollbar-hide flex justify-center">
                                     <LotoCard
                                         ticket={myTicket}
                                         drawnNumbers={drawnNumbersSet}
@@ -432,7 +433,7 @@ export default function GameRoom() {
                                 )}
 
                                 {/* Mobile Condensed Chat - Show at bottom of game tab */}
-                                <div className="lg:hidden w-full h-[200px] mt-2 mb-24">
+                                <div className="lg:hidden w-full h-[200px] mt-2 mb-32">
                                     <ChatBox
                                         messages={messages.slice(-5)}
                                         onSendMessage={sendMessage}

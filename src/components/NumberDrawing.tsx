@@ -33,10 +33,11 @@ const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers 
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500/60">Đang xổ số</h3>
                 <button
                     onClick={() => setIsMuted(!isMuted)}
-                    className="text-white/20 hover:text-white transition-colors"
+                    className="text-white/20 hover:text-white transition-colors p-2 -mr-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl"
                     aria-label={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                    aria-pressed={isMuted}
                 >
-                    {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                 </button>
             </div>
 
@@ -54,7 +55,7 @@ const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers 
                             transition={{ type: "spring", stiffness: 200, damping: 15 }}
                             className="text-5xl sm:text-7xl font-black text-yellow-500 font-serif drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]"
                         >
-                            <span className="font-variant-numeric-tabular-nums">
+                            <span className="tabular-nums">
                                 {currentNumber !== null ? (currentNumber < 10 ? `0${currentNumber}` : currentNumber) : "--"}
                             </span>
                         </motion.div>
@@ -93,7 +94,7 @@ const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers 
                                     : "bg-white/5 border-white/10 text-white/40"}
                             `}
                         >
-                            <span className="font-variant-numeric-tabular-nums">
+                            <span className="tabular-nums">
                                 {num < 10 ? `0${num}` : num}
                             </span>
                         </motion.div>
