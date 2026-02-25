@@ -15,17 +15,12 @@ const ADSTERRA_SCRIPT_SRC = [
   "https://*.go-cetechnology.com",
 ].join(" ");
 
-const ADSTERRA_IMG_SRC = [
-  "https://*.highperformanceformat.com",
-  "https://*.adsterra.com",
-  "https://*.butterflymediaget.com",
-].join(" ");
+// img-src wildcard: ad creatives fetch images from many CDN domains
+const ADSTERRA_IMG_SRC = "*";
 
-const ADSTERRA_FRAME_SRC = [
-  "https://*.highperformanceformat.com",
-  "https://*.adsterra.com",
-  "https://*.profitablecpmrate.com",
-].join(" ");
+// frame-src must be wildcard: Adsterra ad creatives load from many random CDN domains
+// that change per auction — whitelisting specific domains will always block some ads
+const ADSTERRA_FRAME_SRC = "*";
 
 const securityHeaders = [
   // Allow Adsterra scripts to load inside iframe srcdoc
