@@ -1,20 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Megaphone } from "lucide-react";
 
 /**
  * Adsterra banner key — set NEXT_PUBLIC_ADSTERRA_KEY in .env.local
  * Lấy key từ: Adsterra Dashboard → Sites → Create placement → Banner
  */
 const ADSTERRA_KEY = process.env.NEXT_PUBLIC_ADSTERRA_KEY ?? "";
-
-// Adsterra Social Bar key (floating bar, ít intrusive nhất)
 const ADSTERRA_SOCIAL_BAR_KEY = process.env.NEXT_PUBLIC_ADSTERRA_SOCIAL_BAR_KEY ?? "";
+
+/**
+ * IS_DEV — true khi chạy localhost
+ * Adsterra KHÔNG serve ads trên localhost (domain cookie restriction).
+ * Production (vercel.app / domain thật) sẽ hiển thị ads bình thường.
+ */
+const IS_DEV = process.env.NODE_ENV === "development";
 
 interface AdsterraBannerProps {
     /**
-     * mobile     — 320×50, dùng trong game room mobile
+     * mobile      — 320×50, dùng trong game room mobile
      * leaderboard — 728×90, dùng trong landing page desktop
      */
     size?: "mobile" | "leaderboard";
@@ -24,22 +29,36 @@ interface AdsterraBannerProps {
 /**
  * AdsterraBanner — iframe srcdoc approach (only reliable in React/Next.js)
  *
- * WHY iframe srcdoc: React components share the same window object.
- * Multiple Adsterra ads overwrite each other's window.atOptions.
- * Each iframe gets its own isolated window context → no conflict.
- *
- * Refs: https://joshwp.com/how-to-implement-adsterra-ads-in-react-js-next-js-projects/
+ * WHY iframe srcdoc: Multiple ads share window.atOptions — iframe isolates each.
+ * WHY ads blank on localhost: Ad networks block 127.0.0.1 / localhost by design.
+ *   → Dev mode shows a placeholder with correct dimensions for layout testing.
+ *   → Production (real domain) renders the real Adsterra iframe.
  */
 export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBannerProps) {
     const [dismissed, setDismissed] = useState(false);
 
-    // Không render nếu key chưa cấu hình hoặc đã dismiss
     if (!ADSTERRA_KEY || dismissed) return null;
 
     const width = size === "leaderboard" ? 728 : 320;
     const height = size === "leaderboard" ? 90 : 50;
 
-    // Mỗi iframe có window.atOptions riêng biệt — không conflict
+    // Dev placeholder — hiển thị đúng kích thước để layout test
+    if (IS_DEV) {
+        return (
+            <div
+                className={`relative flex items-center justify-center gap-1.5
+                    border border-dashed border-white/20 rounded
+                    bg-white/5 text-white/30 text-[9px] font-mono ${className}`}
+                style={{ width, height }}
+                title="Adsterra ad — chỉ hiện trên production domain"
+            >
+                <Megaphone className="w-3 h-3 opacity-50" />
+                <span>AD {width}×{height} · localhost blocked · works on production</span>
+            </div>
+        );
+    }
+
+    // Mỗi iframe có window.atOptions riêng — không conflict với banner khác
     const adHTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -59,7 +78,6 @@ export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBann
             style={{ minWidth: width, minHeight: height + 8 }}
             aria-label="Quảng cáo"
         >
-            {/* Nút đóng */}
             <button
                 onClick={() => setDismissed(true)}
                 aria-label="Đóng quảng cáo"
@@ -77,26 +95,34 @@ export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBann
                 style={{ width, height, border: "none", overflow: "hidden", display: "block" }}
                 scrolling="no"
                 title="Quảng cáo"
-                /* sandbox cho phép script chạy nhưng cô lập với parent */
                 sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             />
         </div>
     );
 }
 
-interface AdsterraSocialBarProps {
-    className?: string;
-}
-
 /**
- * AdsterraSocialBar — floating bar ad (least intrusive format)
- * Adsterra Social Bar: hiển thị thanh nhỏ ở top/bottom
- * Dùng key khác với banner (tạo riêng trên Adsterra dashboard)
+ * AdsterraSocialBar — floating bar format (ít intrusive nhất)
+ * Dùng key riêng tạo từ Adsterra dashboard (Social Bar format)
  */
-export function AdsterraSocialBar({ className = "" }: AdsterraSocialBarProps) {
+export function AdsterraSocialBar({ className = "" }: { className?: string }) {
     const [dismissed, setDismissed] = useState(false);
 
     if (!ADSTERRA_SOCIAL_BAR_KEY || dismissed) return null;
+
+    if (IS_DEV) {
+        return (
+            <div
+                className={`flex items-center justify-center gap-1.5
+                    border border-dashed border-white/20 rounded
+                    bg-white/5 text-white/30 text-[9px] font-mono h-[60px] ${className}`}
+                title="Social Bar — localhost blocked"
+            >
+                <Megaphone className="w-3 h-3 opacity-50" />
+                <span>SOCIAL BAR · localhost blocked · works on production</span>
+            </div>
+        );
+    }
 
     const adHTML = `<!DOCTYPE html>
 <html>
