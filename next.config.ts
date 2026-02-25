@@ -13,6 +13,8 @@ const ADSTERRA_SCRIPT_SRC = [
   "https://*.adsterra.com",
   "https://*.butterflymediaget.com",
   "https://*.go-cetechnology.com",
+  "https://*.highperformancegate.com",
+  "https://*.highperformancecdn.com",
 ].join(" ");
 
 // img-src wildcard: ad creatives fetch images from many CDN domains
@@ -28,12 +30,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       `default-src 'self'`,
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${ADSTERRA_SCRIPT_SRC}`,
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${ADSTERRA_SCRIPT_SRC}`,
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `font-src 'self' https://fonts.gstatic.com`,
       `img-src 'self' data: blob: ${ADSTERRA_IMG_SRC}`,
       `frame-src 'self' ${ADSTERRA_FRAME_SRC}`,
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${ADSTERRA_SCRIPT_SRC}`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://* ${ADSTERRA_SCRIPT_SRC}`,
       `media-src 'self' blob:`,
     ].join("; "),
   },
