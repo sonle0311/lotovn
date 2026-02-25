@@ -6,6 +6,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "npm", "run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "LotoVN Production Preview",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "npm", "run", "start"],
+      "port": 3000
     }
   ]
 }

@@ -62,19 +62,23 @@ export default function ShopeeAffiliateCTA({ variant = "waiting", className = ""
         );
     }
 
-    // Mini link trong landing page footer — hòa vào design
+    // Mini pill dưới form — rõ ràng, không intrusive, out of mix-blend-screen context
     return (
         <a
             href={SHOPEE_AFFILIATE_URL}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className={`inline-flex items-center gap-1 text-[10px] font-bold
-                text-white/20 hover:text-orange-400/80
-                transition-colors duration-200 pointer-events-auto ${className}`}
-            aria-label="Shopee Tết"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                bg-orange-500/15 border border-orange-500/30
+                text-orange-300 text-[11px] font-bold
+                hover:bg-orange-500/25 hover:text-orange-200 hover:border-orange-400/50
+                transition-all duration-200 cursor-pointer shadow-[0_0_12px_rgba(249,115,22,0.15)]
+                pointer-events-auto ${className}`}
+            aria-label="Mua sắm Tết trên Shopee"
         >
-            <ShoppingBag className="w-2.5 h-2.5" />
-            <span>Shopee Tết</span>
+            <ShoppingBag className="w-3 h-3 shrink-0" />
+            <span>Mua sắm Tết · Shopee</span>
+            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
         </a>
     );
 }

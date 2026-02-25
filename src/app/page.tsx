@@ -210,20 +210,23 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Adsterra banner — chỉ hiện trên desktop (leaderboard 728x90) */}
+        {/* Shopee affiliate pill — mobile: above footer | desktop: above Adsterra (728x90 at bottom-16) */}
+        <div className="absolute bottom-11 lg:bottom-[164px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+          <ShopeeAffiliateCTA variant="landing" />
+        </div>
+
+        {/* Adsterra banner — chỉ hiện trên desktop (leaderboard 728x90), desktop only below Shopee pill */}
         <div className="absolute bottom-16 left-1/2 -translate-x-1/2 hidden lg:flex justify-center pointer-events-auto">
           <AdsterraBanner size="leaderboard" />
         </div>
 
-        {/* Footer credit + Shopee affiliate */}
+        {/* Footer credit */}
         <footer className="absolute bottom-4 w-full flex flex-col md:flex-row items-center justify-center gap-2 text-[10px] sm:text-xs font-bold text-white/20 uppercase tracking-widest md:tracking-[0.3em] pointer-events-none mix-blend-screen px-4 text-center">
           <span>Premium Loto • Tet 2026 Edition</span>
           <span className="hidden md:inline text-yellow-500">•</span>
           <a href="https://www.sonlt.dev/" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-400 transition-colors cursor-pointer pointer-events-auto flex items-center gap-1">
             Made with <span className="text-red-500 animate-pulse">❤</span> by <span className="font-black text-yellow-500">SonLT</span>
           </a>
-          <span className="hidden md:inline text-yellow-500/40">•</span>
-          <ShopeeAffiliateCTA variant="landing" />
         </footer>
       </main>
     </>
