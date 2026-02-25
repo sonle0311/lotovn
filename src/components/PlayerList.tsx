@@ -6,9 +6,11 @@ import { Player } from "@/lib/useGameRoom";
 
 interface PlayerListProps {
     players: Player[];
+    currentPlayerName?: string; // own player name to highlight
+    sessionWins?: number;       // own win count this session
 }
 
-const PlayerList = memo(function PlayerList({ players }: PlayerListProps) {
+const PlayerList = memo(function PlayerList({ players, currentPlayerName, sessionWins }: PlayerListProps) {
     return (
         <div className="glass-card flex flex-col h-full border-white/5 overflow-hidden min-h-[300px]">
             <div className="bg-white/5 p-3 sm:p-4 flex items-center gap-2 border-b border-white/10">
@@ -25,7 +27,7 @@ const PlayerList = memo(function PlayerList({ players }: PlayerListProps) {
                         <div className="flex items-center gap-3">
                             <div className="relative">
                                 <div className="w-9 h-9 rounded-2xl bg-linear-to-br from-red-600 to-red-900 border border-white/20 flex items-center justify-center font-black text-xs uppercase shadow-lg text-white">
-                                    {player.name[0]}
+                                    {player.name?.[0] ?? "?"}
                                 </div>
                                 {player.isHost && (
                                     <div className="absolute -top-1.5 -right-1.5 bg-yellow-500 rounded-full p-1 shadow-xl ring-2 ring-red-950">
@@ -36,6 +38,12 @@ const PlayerList = memo(function PlayerList({ players }: PlayerListProps) {
                             <span className={`text-xs font-black uppercase tracking-tight ${player.status === 'won' ? 'text-yellow-500' : 'text-white/80'}`}>
                                 {player.name}
                             </span>
+                            {/* Show win count badge next to own player's name */}
+                            {player.name === currentPlayerName && sessionWins && sessionWins > 0 ? (
+                                <span className="text-[8px] font-black text-yellow-500 bg-yellow-500/15 px-1.5 py-0.5 rounded-full ml-1">
+                                    {sessionWins}W
+                                </span>
+                            ) : null}
                         </div>
 
                         <div className="flex items-center gap-2">

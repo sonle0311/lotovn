@@ -11,6 +11,20 @@ interface AdminControlsProps {
     drawnNumbers: number[];
 }
 
+/** Returns a random undrawn number (1-90), or null when all 90 are drawn. */
+function pickRandomAvailable(drawnNumbers: number[]): number | null {
+    const drawnSet = new Set(drawnNumbers);
+    const available = Array.from({ length: 90 }, (_, i) => i + 1).filter(n => !drawnSet.has(n));
+    return available.length ? available[Math.floor(Math.random() * available.length)] : null;
+}
+
+// Quick-select presets mapping to slider range (3-15s)
+const SPEED_PRESETS = [
+    { label: "Chậm", seconds: 10 },
+    { label: "Vừa", seconds: 5 },
+    { label: "Nhanh", seconds: 3 },
+] as const;
+
 export default function AdminControls({ onStart, onDraw, onReset, gameStatus, drawnNumbers }: AdminControlsProps) {
     const [autoDraw, setAutoDraw] = useState(false);
     const [drawInterval, setDrawInterval] = useState(5); // seconds
@@ -19,13 +33,9 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
     useEffect(() => {
         if (autoDraw && gameStatus === 'playing') {
             if (countdown <= 0) {
-                const allNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
-                const drawnSet = new Set(drawnNumbers);
-                const available = allNumbers.filter(n => !drawnSet.has(n));
-
-                if (available.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * available.length);
-                    onDraw(available[randomIndex]);
+                const next = pickRandomAvailable(drawnNumbers);
+                if (next !== null) {
+                    onDraw(next);
                     setCountdown(drawInterval);
                 } else {
                     setAutoDraw(false);
@@ -84,12 +94,8 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
 
                         <button
                             onClick={() => {
-                                const allNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
-                                const drawnSet = new Set(drawnNumbers);
-                                const available = allNumbers.filter(n => !drawnSet.has(n));
-                                if (available.length > 0) {
-                                    onDraw(available[Math.floor(Math.random() * available.length)]);
-                                }
+                                const next = pickRandomAvailable(drawnNumbers);
+                                if (next !== null) onDraw(next);
                             }}
                             disabled={gameStatus === 'ended'}
                             className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-white/5 border-2 border-white/10 text-white hover:bg-white/10 transition-all btn-tactile disabled:opacity-50"
@@ -106,6 +112,21 @@ export default function AdminControls({ onStart, onDraw, onReset, gameStatus, dr
                 <div className="flex justify-between items-center mb-2">
                     <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tốc độ xổ</span>
                     <span className="text-[10px] font-black text-yellow-500">{drawInterval} giây / số</span>
+                </div>
+                {/* Speed preset quick-select buttons — active preset highlighted yellow */}
+                <div className="flex gap-1.5 mb-2">
+                    {SPEED_PRESETS.map(p => (
+                        <button
+                            key={p.seconds}
+                            onClick={() => setDrawInterval(p.seconds)}
+                            className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all btn-tactile
+                                ${drawInterval === p.seconds
+                                    ? "bg-yellow-500 text-red-950 shadow-[0_2px_0_#92400e]"
+                                    : "bg-white/5 text-white/40 hover:bg-white/10 border border-white/10"}`}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
                 </div>
                 <input
                     type="range"

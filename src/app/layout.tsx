@@ -83,15 +83,18 @@ export const metadata: Metadata = {
       { url: "/favicon.svg", type: "image/svg+xml" },
     ],
     apple: [
+      { url: "/icon-192x192.png", sizes: "192x192" },
       { url: "/favicon.svg" },
     ],
   },
 
-  // ─── PWA Manifest ─────────────────────────────────────
-  manifest: "/manifest.json",
-
   // ─── App-specific ─────────────────────────────────────
   applicationName: "LotoVN",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "LotoVN",
+  },
   category: "games",
   classification: "Game, Entertainment",
 };

@@ -3,7 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { formatNumberVietnamese } from "@/lib/gameLogic";
 import { Volume2, VolumeX } from "lucide-react";
-import { useState, memo, useMemo } from "react";
+import { useState, memo, useMemo, useEffect } from "react";
+import { useSoundSystem } from "@/lib/use-sound-system";
 
 interface NumberDrawingProps {
     currentNumber: number | null;
@@ -12,7 +13,16 @@ interface NumberDrawingProps {
 
 const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers }: NumberDrawingProps) {
     const [isMuted, setIsMuted] = useState(false);
+    const { announceNumber, playDrawBeep } = useSoundSystem(isMuted);
     const reversedNumbers = useMemo(() => [...drawnNumbers].reverse(), [drawnNumbers]);
+
+    // Play beep then announce the Vietnamese number name on each draw
+    useEffect(() => {
+        if (currentNumber !== null) {
+            playDrawBeep();
+            announceNumber(currentNumber);
+        }
+    }, [currentNumber, playDrawBeep, announceNumber]);
 
     return (
         <div className="glass-card p-3 sm:p-6 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[300px] border-yellow-500/30 overflow-hidden relative">

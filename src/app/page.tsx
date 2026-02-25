@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createRoom } from "@/lib/room-service";
 import { Coffee, Play, Users, Trophy, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import LandingBackground from "@/components/LandingBackground";
@@ -12,6 +13,7 @@ export default function LandingPage() {
   const [playerName, setPlayerName] = useState("");
   const [error, setError] = useState("");
   const [isHovering, setIsHovering] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,13 +28,24 @@ export default function LandingPage() {
     router.push(`/room/${roomId}?name=${encodeURIComponent(playerName.trim())}`);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!playerName.trim()) {
       setError("Vui lòng nhập tên của bạn");
       return;
     }
     const newRoomId = Math.random().toString(36).substring(2, 7).toUpperCase();
-    router.push(`/room/${newRoomId}?name=${encodeURIComponent(playerName.trim())}&host=true`);
+    const trimmedName = playerName.trim();
+
+    setIsCreating(true);
+    try {
+      await createRoom(newRoomId, trimmedName);
+      // No &host=true — host identity now resolved from DB
+      router.push(`/room/${newRoomId}?name=${encodeURIComponent(trimmedName)}`);
+    } catch {
+      setError("Không thể tạo phòng. Vui lòng thử lại.");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   // JSON-LD Structured Data
@@ -185,7 +198,7 @@ export default function LandingPage() {
                     <div className="grow border-t border-white/10"></div>
                   </div>
 
-                  <button onClick={handleCreate} aria-label="Tạo một phòng chơi mới" className="w-full py-3.5 bg-white/5 border border-white/10 rounded-xl text-yellow-500 font-bold text-base hover:bg-white/10 hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 group/btn2">
+                  <button onClick={handleCreate} disabled={isCreating} aria-label="Tạo một phòng chơi mới" className="w-full py-3.5 bg-white/5 border border-white/10 rounded-xl text-yellow-500 font-bold text-base hover:bg-white/10 hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 group/btn2 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Play className="w-4 h-4 fill-current" />
                     <span>TẠO PHÒNG MỚI</span>
                   </button>

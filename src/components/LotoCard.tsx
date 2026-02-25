@@ -27,15 +27,20 @@ const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onM
 
     return (
         <motion.div
+            role={readOnly ? undefined : "button"}
+            aria-label={readOnly ? undefined : `Ô ${num < 10 ? `0${num}` : num}${isMarked ? ", đã đánh dấu" : ""}${isDrawn ? ", đã xổ" : ""}`}
+            aria-pressed={readOnly ? undefined : isMarked}
+            tabIndex={readOnly ? undefined : 0}
             whileTap={readOnly ? undefined : { scale: 0.9, rotate: -2 }}
             onClick={readOnly ? undefined : () => onMark?.(num, isDrawn)}
+            onKeyDown={readOnly ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') onMark?.(num, isDrawn); }}
             className={`
                 loto-cell ${readOnly ? "" : "cursor-pointer"}
                 ${isMarked ? "matched" : ""}
                 ${isCurrent ? "active" : ""}
             `}
         >
-            <span className={`relative z-10 font-black italic font-impact tracking-tighter font-variant-numeric-tabular-nums ${isCurrent ? "text-white" : "text-black"}`}>
+            <span className={`relative z-10 font-black italic font-impact tracking-tighter tabular-nums ${isCurrent ? "text-white" : "text-black"}`}>
                 {num < 10 ? `0${num}` : num}
                 {/* Marking hint for drawn but not marked */}
                 {!readOnly && isDrawn && !isMarked && !isCurrent && (
@@ -53,7 +58,7 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
     return (
         <div className="w-full max-w-full mx-auto px-1 sm:px-4">
             <div
-                className="paper-ticket w-full border-[2px] sm:border-[4px] border-black rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden transition-all"
+                className="paper-ticket w-full border-[2px] sm:border-[4px] border-black rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden transition-all scanlines grain"
                 style={{ backgroundColor: ticket.color }}
             >
                 {/* Decorative Elements */}
@@ -82,10 +87,10 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                         >
                             <div className="space-y-1">
                                 {frame.map((row, rowIndex) => (
-                                    <div key={rowIndex} className="loto-grid">
+                                    <div key={`${ticket.id}-f${frameIndex}-r${rowIndex}`} className="loto-grid">
                                         {row.map((num, colIndex) => (
                                             <LotoCell
-                                                key={`${rowIndex}-${colIndex}`}
+                                                key={`${ticket.id}-f${frameIndex}-r${rowIndex}-c${colIndex}`}
                                                 num={num}
                                                 isDrawn={num !== null && drawnNumbers.has(num)}
                                                 isMarked={num !== null && markedNumbers.has(num)}
