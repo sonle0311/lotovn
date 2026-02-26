@@ -4,10 +4,11 @@ import { useState } from "react";
 import { X, Megaphone } from "lucide-react";
 
 /**
- * Adsterra banner key — set NEXT_PUBLIC_ADSTERRA_KEY in .env.local
+ * Adsterra banner key — set NEXT_PUBLIC_ADSTERRA_KEY_728X90 và NEXT_PUBLIC_ADSTERRA_KEY_320X50 in .env.local
  * Lấy key từ: Adsterra Dashboard → Sites → Create placement → Banner
  */
-const ADSTERRA_KEY = process.env.NEXT_PUBLIC_ADSTERRA_KEY ?? "";
+const ADSTERRA_KEY_728X90 = process.env.NEXT_PUBLIC_ADSTERRA_KEY_728X90 ?? process.env.NEXT_PUBLIC_ADSTERRA_KEY ?? "";
+const ADSTERRA_KEY_320X50 = process.env.NEXT_PUBLIC_ADSTERRA_KEY_320X50 ?? process.env.NEXT_PUBLIC_ADSTERRA_KEY ?? "";
 const ADSTERRA_SOCIAL_BAR_KEY = process.env.NEXT_PUBLIC_ADSTERRA_SOCIAL_BAR_KEY ?? "";
 
 /**
@@ -36,6 +37,8 @@ interface AdsterraBannerProps {
  */
 export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBannerProps) {
     const [dismissed, setDismissed] = useState(false);
+
+    const ADSTERRA_KEY = size === "leaderboard" ? ADSTERRA_KEY_728X90 : ADSTERRA_KEY_320X50;
 
     if (!ADSTERRA_KEY || dismissed) return null;
 
