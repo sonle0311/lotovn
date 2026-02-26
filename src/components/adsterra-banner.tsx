@@ -71,7 +71,7 @@ export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBann
   <script type="text/javascript">
     atOptions={'key':'${ADSTERRA_KEY}','format':'iframe','height':${height},'width':${width},'params':{}}
   </script>
-  <script type="text/javascript" src="//www.highperformanceformat.com/${ADSTERRA_KEY}/invoke.js"></script>
+  <script type="text/javascript" src="https://www.highperformanceformat.com/${ADSTERRA_KEY}/invoke.js"></script>
 </body>
 </html>`;
 
@@ -101,7 +101,7 @@ export function AdsterraBanner({ size = "mobile", className = "" }: AdsterraBann
                 style={{ width, height, border: "none", overflow: "hidden", display: "block" }}
                 scrolling="no"
                 title="Quảng cáo"
-                sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-forms"
+                sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-forms allow-same-origin"
             />
         </div>
     );
@@ -136,7 +136,7 @@ export function AdsterraSocialBar({ className = "" }: { className?: string }) {
   <style>body{margin:0;padding:0;overflow:hidden;background:transparent;}</style>
 </head>
 <body>
-  <script type="text/javascript" src="//pl${ADSTERRA_SOCIAL_BAR_KEY}.profitablecpmrate.com/${ADSTERRA_SOCIAL_BAR_KEY}/invoke.js" async></script>
+  <script type="text/javascript" src="https://pl${ADSTERRA_SOCIAL_BAR_KEY}.profitablecpmrate.com/${ADSTERRA_SOCIAL_BAR_KEY}/invoke.js" async></script>
 </body>
 </html>`;
 
