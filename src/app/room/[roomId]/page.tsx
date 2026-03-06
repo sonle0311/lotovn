@@ -8,9 +8,9 @@ import NumberDrawing from "@/components/NumberDrawing";
 import ChatBox from "@/components/ChatBox";
 import PlayerList from "@/components/PlayerList";
 import AdminControls from "@/components/AdminControls";
-import NumberPoolGrid from "@/components/number-pool-grid";
-import ShopeeAffiliateCTA from "@/components/shopee-affiliate-cta";
-import { AdsterraBanner } from "@/components/adsterra-banner";
+import NumberPoolGrid from "@/components/NumberPoolGrid";
+import ShopeeAffiliateCTA from "@/components/ShopeeAffiliateCTA";
+import { AdsterraBanner } from "@/components/AdsterraBanner";
 import { useEffect, useState, useMemo } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,12 +34,75 @@ const OPPONENT_PHRASES = [
     "Áp lực quá, {name} đang chờ hàng {info} tỏa sáng!",
 ];
 
+/** #10: Extracted from IIFE — lịch sử xổ số trong winner modal */
+import type { LotoCard as LotoCardType, LotoTicket } from "@/lib/gameLogic";
+
+function DrawHistory({ drawnNumbers, drawnNumbersSet, winnerMarkedSet, winnerTicket }: {
+    drawnNumbers: number[];
+    drawnNumbersSet: Set<number>;
+    winnerMarkedSet: Set<number>;
+    winnerTicket: LotoTicket | null;
+}) {
+    const winningNumbers = useMemo(() => {
+        const nums = new Set<number>();
+        if (winnerTicket) {
+            (winnerTicket.frames as LotoCardType[]).forEach(frame => {
+                frame.forEach(row => {
+                    if (checkRowWin(row, drawnNumbersSet)) {
+                        row.forEach(n => { if (n !== null) nums.add(n); });
+                    }
+                });
+            });
+        }
+        return nums;
+    }, [winnerTicket, drawnNumbersSet]);
+
+    const reversedHistory = useMemo(() => [...drawnNumbers].reverse(), [drawnNumbers]);
+
+    const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
+    const itemVariants = { hidden: { scale: 0, opacity: 0 }, show: { scale: 1, opacity: 1 } };
+
+    return (
+        <div className="mb-4">
+            <div className="flex justify-between items-center mb-2 px-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">
+                    Lịch sử xổ số ({drawnNumbers.length} số)
+                </p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500/50 italic">
+                    Mới nhất đầu tiên ↓
+                </p>
+            </div>
+            <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-wrap gap-1 justify-center">
+                {reversedHistory.map((num, idx) => {
+                    const isWinningNum = winningNumbers.has(num);
+                    const isMarkedNum = winnerMarkedSet.has(num);
+                    return (
+                        <motion.span
+                            key={`${idx}-${num}`}
+                            variants={itemVariants}
+                            className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-black border transition-all ${isWinningNum
+                                ? "bg-red-600 border-red-400 text-white shadow-[0_0_15px_rgba(220,38,38,0.6)] z-10 scale-110"
+                                : isMarkedNum
+                                    ? "bg-green-500/30 border-green-500/50 text-green-300"
+                                    : "bg-white/5 border-white/10 text-white/40"
+                                }`}
+                        >
+                            {num < 10 ? `0${num}` : num}
+                        </motion.span>
+                    );
+                })}
+            </motion.div>
+        </div>
+    );
+}
+
 export default function GameRoom() {
     const searchParams = useSearchParams();
     const params = useParams();
     const router = useRouter();
     const roomId = params.roomId as string;
-    const playerName = searchParams.get("name") || "";
+    const rawName = searchParams.get("name") || "";
+    const playerName = rawName.replace(/<[^>]*>/g, '').replace(/[\x00-\x1F]/g, '').trim().slice(0, 20);
 
     const {
         players,
@@ -550,7 +613,7 @@ export default function GameRoom() {
                                     Các số đã đánh ({winner.markedNumbers.length} số)
                                 </p>
                                 <div className="flex flex-wrap gap-1 justify-center">
-                                    {winner.markedNumbers.sort((a, b) => a - b).map(num => (
+                                    {[...winner.markedNumbers].sort((a, b) => a - b).map(num => (
                                         <span
                                             key={num}
                                             className={`w-7 h-7 rounded-full border flex items-center justify-center text-[10px] font-black ${drawnNumbersSet.has(num)
@@ -565,76 +628,12 @@ export default function GameRoom() {
                             </div>
 
                             {/* Lịch sử xổ số */}
-                            {(() => {
-                                // Phát hiện hàng thắng (winning sequence)
-                                const winningNumbers = new Set<number>();
-                                if (winner.ticket) {
-                                    winner.ticket.frames.forEach(frame => {
-                                        frame.forEach(row => {
-                                            if (checkRowWin(row, drawnNumbersSet)) {
-                                                row.forEach(n => { if (n !== null) winningNumbers.add(n); });
-                                            }
-                                        });
-                                    });
-                                }
-
-                                // Đảo ngược lịch sử để số mới nhất nằm đầu
-                                const reversedHistory = [...drawnNumbers].reverse();
-
-                                const containerVariants = {
-                                    hidden: { opacity: 0 },
-                                    show: {
-                                        opacity: 1,
-                                        transition: {
-                                            staggerChildren: 0.05
-                                        }
-                                    }
-                                };
-
-                                const itemVariants = {
-                                    hidden: { scale: 0, opacity: 0 },
-                                    show: { scale: 1, opacity: 1 }
-                                };
-
-                                return (
-                                    <div className="mb-4">
-                                        <div className="flex justify-between items-center mb-2 px-1">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">
-                                                Lịch sử xổ số ({drawnNumbers.length} số)
-                                            </p>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500/50 italic">
-                                                Mới nhất đầu tiên ↓
-                                            </p>
-                                        </div>
-                                        <motion.div
-                                            variants={containerVariants}
-                                            initial="hidden"
-                                            animate="show"
-                                            className="flex flex-wrap gap-1 justify-center"
-                                        >
-                                            {reversedHistory.map((num, idx) => {
-                                                const isWinningNum = winningNumbers.has(num);
-                                                const isMarkedNum = winnerMarkedSet.has(num);
-
-                                                return (
-                                                    <motion.span
-                                                        key={`${idx}-${num}`}
-                                                        variants={itemVariants}
-                                                        className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-black border transition-all ${isWinningNum
-                                                            ? "bg-red-600 border-red-400 text-white shadow-[0_0_15px_rgba(220,38,38,0.6)] z-10 scale-110"
-                                                            : isMarkedNum
-                                                                ? "bg-green-500/30 border-green-500/50 text-green-300"
-                                                                : "bg-white/5 border-white/10 text-white/40"
-                                                            }`}
-                                                    >
-                                                        {num < 10 ? `0${num}` : num}
-                                                    </motion.span>
-                                                );
-                                            })}
-                                        </motion.div>
-                                    </div>
-                                );
-                            })()}
+                            <DrawHistory
+                                drawnNumbers={drawnNumbers}
+                                drawnNumbersSet={drawnNumbersSet}
+                                winnerMarkedSet={winnerMarkedSet}
+                                winnerTicket={winner.ticket}
+                            />
 
                             {/* Shopee affiliate CTA — natural pause sau khi thắng */}
                             <div className="mb-3">

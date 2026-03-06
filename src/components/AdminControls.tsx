@@ -1,7 +1,7 @@
 "use client";
 
 import { Play, Pause, RotateCcw, FastForward, Settings } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 interface AdminControlsProps {
     onStart: () => void;

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatNumberVietnamese } from "@/lib/gameLogic";
 import { Volume2, VolumeX } from "lucide-react";
 import { useState, memo, useMemo, useEffect } from "react";
-import { useSoundSystem } from "@/lib/use-sound-system";
+import { useSoundSystem } from "@/lib/useSoundSystem";
 
 interface NumberDrawingProps {
     currentNumber: number | null;

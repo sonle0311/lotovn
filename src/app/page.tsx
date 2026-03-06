@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/lib/room-service";
-import { Coffee, Play, Users, Trophy, Star } from "lucide-react";
+import { Play, Users, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import LandingBackground from "@/components/LandingBackground";
-import ShopeeAffiliateCTA from "@/components/shopee-affiliate-cta";
-import { AdsterraBanner } from "@/components/adsterra-banner";
+import ShopeeAffiliateCTA from "@/components/ShopeeAffiliateCTA";
+import { AdsterraBanner } from "@/components/AdsterraBanner";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -35,7 +35,9 @@ export default function LandingPage() {
       setError("Vui lòng nhập tên của bạn");
       return;
     }
-    const newRoomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const arr = new Uint8Array(5);
+    crypto.getRandomValues(arr);
+    const newRoomId = Array.from(arr, b => b.toString(36)).join('').substring(0, 8).toUpperCase();
     const trimmedName = playerName.trim();
 
     setIsCreating(true);
@@ -163,6 +165,7 @@ export default function LandingPage() {
                       placeholder="VD: Công Tử Bạc Liêu"
                       value={playerName}
                       onChange={(e) => { setPlayerName(e.target.value); setError(""); }}
+                      maxLength={20}
                       aria-label="Nhập tên người chơi"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold"
                     />
@@ -176,6 +179,7 @@ export default function LandingPage() {
                       placeholder="Nhập mã hoặc để trống..."
                       value={roomId}
                       onChange={(e) => { setRoomId(e.target.value.toUpperCase()); setError(""); }}
+                      maxLength={10}
                       aria-label="Nhập mã phòng"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold tracking-widest"
                     />

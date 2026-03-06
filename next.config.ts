@@ -35,7 +35,7 @@ const securityHeaders = [
       `font-src 'self' https://fonts.gstatic.com`,
       `img-src 'self' data: blob: ${ADSTERRA_IMG_SRC}`,
       `frame-src 'self' ${ADSTERRA_FRAME_SRC}`,
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://* ${ADSTERRA_SCRIPT_SRC}`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${ADSTERRA_SCRIPT_SRC}`,
       `media-src 'self' blob:`,
     ].join("; "),
   },

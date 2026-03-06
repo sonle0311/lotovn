@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Lantern from "./Lantern";
 
 export default function LandingBackground() {
@@ -83,8 +83,9 @@ function GoldDust() {
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
 
-        const particles: any[] = [];
-        const particleCount = 80; // Increased count
+        interface Particle { x: number; y: number; vx: number; vy: number; size: number; alpha: number; }
+        const particles: Particle[] = [];
+        const particleCount = 80;
 
         for (let i = 0; i < particleCount; i++) {
             particles.push({
@@ -92,8 +93,8 @@ function GoldDust() {
                 y: Math.random() * height,
                 vx: (Math.random() - 0.5) * 0.3,
                 vy: (Math.random() - 0.5) * 0.3 - 0.1,
-                size: Math.random() * 2.5, // Slightly larger
-                alpha: Math.random() * 0.6 + 0.2 // Brighter
+                size: Math.random() * 2.5,
+                alpha: Math.random() * 0.6 + 0.2
             });
         }
 

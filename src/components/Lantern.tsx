@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 
 interface LanternProps {
     position: { top?: string; left?: string; right?: string; bottom?: string };
@@ -10,8 +9,6 @@ interface LanternProps {
 }
 
 export default function Lantern({ position, size, delay }: LanternProps) {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
 
     return (
         <motion.div
@@ -22,7 +19,7 @@ export default function Lantern({ position, size, delay }: LanternProps) {
                 x: [-2, 2, -2],
             }}
             transition={{
-                duration: mounted ? 4 + Math.random() * 2 : 5,
+                duration: 5,
                 repeat: Infinity,
                 ease: "easeInOut",
                 delay,

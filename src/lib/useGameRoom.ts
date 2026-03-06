@@ -2,69 +2,28 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
-import { LotoCard, LotoTicket, generateTicket, checkRowWin, checkFullCardWin } from './gameLogic';
+import { LotoTicket, generateTicket } from './gameLogic';
 import { getRoomHost } from './room-service';
-
-export interface WinnerData {
-    name: string;
-    isHost: boolean;
-    ticket: LotoTicket;
-    markedNumbers: number[];
-}
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-// ─── Constants ──────────────────────────────────────────────
-export const MAX_PLAYERS = 20;
-const CHAT_THROTTLE_MS = 2000;
-const MAX_CHAT_MESSAGES = 50;
+// ─── Extracted utils (pure logic) ───────────────────────────
+import { presenceToPlayers } from './presence-logic';
+import type { Player } from './presence-logic';
+import {
+    sanitizeText,
+    createChatMessage,
+    getChatThrottleRemaining,
+    CHAT_THROTTLE_MS,
+    MAX_CHAT_MESSAGES,
+    MAX_PLAYER_NAME_LEN,
+} from './chat-logic';
+import type { ChatMessage } from './chat-logic';
+import { validateWinRequest, MAX_PLAYERS } from './game-state-logic';
+import type { WinnerData } from './game-state-logic';
 
-export interface Player {
-    id: string;
-    name: string;
-    isHost: boolean;
-    status: 'waiting' | 'playing' | 'won';
-    isWaitingKinh?: boolean;
-    waitingNumbers?: number[];
-    lastSeen?: number;
-}
-
-export interface ChatMessage {
-    id: string;
-    senderName: string;
-    text: string;
-    timestamp: number;
-}
-
-// Chuyển presenceState() → Player[]
-function presenceToPlayers(presenceState: Record<string, unknown[]>): Player[] {
-    const players: Player[] = [];
-    for (const [, presences] of Object.entries(presenceState)) {
-        if (!presences || presences.length === 0) continue;
-
-        // Ưu tiên session quan trọng hơn nếu có duplicate
-        // won (0) > playing (1) > waiting (2)
-        const sortedPresences = [...presences].sort((a, b) => {
-            const aEntry = a as Record<string, unknown>;
-            const bEntry = b as Record<string, unknown>;
-            const priority = { 'won': 0, 'playing': 1, 'waiting': 2 };
-            const aPrio = priority[aEntry.status as keyof typeof priority] ?? 3;
-            const bPrio = priority[bEntry.status as keyof typeof priority] ?? 3;
-            return aPrio - bPrio;
-        });
-
-        const p = sortedPresences[0] as Record<string, unknown>;
-        players.push({
-            id: (p.name as string) || '',
-            name: (p.name as string) || '',
-            isHost: (p.isHost as boolean) || false,
-            status: (p.status as Player['status']) || 'waiting',
-            isWaitingKinh: (p.isWaitingKinh as boolean) || false,
-            waitingNumbers: (p.waitingNumbers as number[]) || undefined,
-            lastSeen: Date.now(),
-        });
-    }
-    return players;
-}
+// ─── Re-exports for backward compatibility ──────────────────
+export type { Player, ChatMessage, WinnerData };
+export { MAX_PLAYERS };
 
 export const useGameRoom = (roomId: string, playerName: string) => {
     const [players, setPlayers] = useState<Player[]>([]);
@@ -184,20 +143,20 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     // Auto-mark: add drawn numbers matching current ticket to markedNumbers Set
     useEffect(() => {
         if (!autoMarkEnabled || !myTicket || gameStatusRef.current !== "playing") return;
+        const drawnSet = new Set(drawnNumbers);
         setMarkedNumbers(prev => {
             const next = new Set(prev);
             let changed = false;
             myTicket.frames.forEach(frame =>
                 frame.forEach(row =>
                     row.forEach(num => {
-                        if (num !== null && drawnNumbers.includes(num) && !prev.has(num)) {
+                        if (num !== null && drawnSet.has(num) && !prev.has(num)) {
                             next.add(num);
                             changed = true;
                         }
                     })
                 )
             );
-            // Only return new Set if something actually changed (prevent spurious re-renders)
             return changed ? next : prev;
         });
     }, [drawnNumbers, autoMarkEnabled, myTicket]);
@@ -206,7 +165,9 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const appendMessage = useCallback((msg: ChatMessage) => {
         setMessages(prev => {
             const next = [...prev, msg];
-            return next.length > MAX_CHAT_MESSAGES ? next.slice(-MAX_CHAT_MESSAGES) : next;
+            return next.length > MAX_CHAT_MESSAGES
+                ? next.slice(-MAX_CHAT_MESSAGES)
+                : next;
         });
     }, []);
 
@@ -317,36 +278,20 @@ export const useGameRoom = (roomId: string, playerName: string) => {
             .on('broadcast', { event: 'win_request' }, ({ payload }) => {
                 if (!isHostRef.current) return;
 
-                const req = payload as { name: string; isHost: boolean; ticket: LotoTicket; markedNumbers: number[] };
-                const hostDrawnSet = new Set(drawnNumbersRef.current);
+                const result = validateWinRequest(payload as Parameters<typeof validateWinRequest>[0], drawnNumbersRef.current);
 
-                // Validate: all marked numbers must be in drawn history
-                const validMarks = req.markedNumbers.every(n => hostDrawnSet.has(n));
-                if (!validMarks) {
-                    channel.send({ type: 'broadcast', event: 'win_rejected', payload: { name: req.name, reason: 'invalid_marks' } });
+                if (!result.valid) {
+                    channel.send({ type: 'broadcast', event: 'win_rejected', payload: { name: (payload as { name: string }).name, reason: result.reason } });
                     return;
                 }
 
-                // Validate: ticket must have actual win condition
-                const markedSet = new Set(req.markedNumbers);
-                const hasWin = req.ticket.frames.some(frame =>
-                    checkFullCardWin(frame, markedSet) || frame.some(row => checkRowWin(row, markedSet))
-                );
-                if (!hasWin) {
-                    channel.send({ type: 'broadcast', event: 'win_rejected', payload: { name: req.name, reason: 'no_win_condition' } });
-                    return;
-                }
-
-                // Valid win — broadcast confirmed game_end to all clients
-                const winnerData: WinnerData = { name: req.name, isHost: req.isHost, ticket: req.ticket, markedNumbers: req.markedNumbers };
-                channel.send({ type: 'broadcast', event: 'game_end', payload: { winner: winnerData } });
+                channel.send({ type: 'broadcast', event: 'game_end', payload: { winner: result.winner } });
 
                 // Host local update (broadcast doesn't echo to sender)
-                setWinner(winnerData);
+                setWinner(result.winner);
                 setGameStatus('ended');
                 gameStatusRef.current = 'ended';
-                // Increment session score if host wins
-                if (winnerData.name === playerName) incrementSessionWins();
+                if (result.winner.name === playerName) incrementSessionWins();
             })
             // Step 2: All non-host clients receive confirmed win
             .on('broadcast', { event: 'game_end' }, ({ payload }) => {
@@ -508,18 +453,14 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     }, []);
 
     const sendMessage = useCallback((text: string) => {
-        if (!text.trim()) return false;
+        const throttleRemaining = getChatThrottleRemaining(lastMessageTimeRef.current);
 
-        const now = Date.now();
-        const timeSinceLast = now - lastMessageTimeRef.current;
-
-        if (timeSinceLast < CHAT_THROTTLE_MS) {
-            const remaining = Math.ceil((CHAT_THROTTLE_MS - timeSinceLast) / 1000);
-            setChatCooldown(remaining);
+        if (throttleRemaining > 0) {
+            setChatCooldown(throttleRemaining);
 
             if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
             cooldownTimerRef.current = setInterval(() => {
-                const newRemaining = Math.ceil((CHAT_THROTTLE_MS - (Date.now() - lastMessageTimeRef.current)) / 1000);
+                const newRemaining = getChatThrottleRemaining(lastMessageTimeRef.current);
                 if (newRemaining <= 0) {
                     setChatCooldown(0);
                     if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
@@ -531,19 +472,16 @@ export const useGameRoom = (roomId: string, playerName: string) => {
             return false;
         }
 
-        const msg: ChatMessage = {
-            id: Math.random().toString(36).substring(2, 11),
-            senderName: playerName,
-            text,
-            timestamp: Date.now(),
-        };
+        const msg = createChatMessage(playerName, text);
+        if (!msg.text) return false;
+
         channelRef.current?.send({
             type: 'broadcast',
             event: 'chat',
             payload: msg,
         });
         appendMessage(msg);
-        lastMessageTimeRef.current = now;
+        lastMessageTimeRef.current = Date.now();
         setChatCooldown(0);
         return true;
     }, [playerName, appendMessage]);
@@ -551,35 +489,25 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const declareWin = useCallback(() => {
         if (!myTicket) return;
 
-        // Broadcast win_request — host will validate and respond with game_end or win_rejected
+        const request = {
+            name: playerName,
+            isHost: isHostRef.current,
+            ticket: myTicket,
+            markedNumbers: Array.from(markedNumbers),
+        };
+
         channelRef.current?.send({
             type: 'broadcast',
             event: 'win_request',
-            payload: {
-                name: playerName,
-                isHost: isHostRef.current,
-                ticket: myTicket,
-                markedNumbers: Array.from(markedNumbers),
-            },
+            payload: request,
         });
 
-        // If I am the host: broadcast doesn't echo back, validate locally
+        // Host: broadcast không echo lại, validate locally
         if (isHostRef.current) {
-            const hostDrawnSet = new Set(drawnNumbersRef.current);
-            const markedArr = Array.from(markedNumbers);
-            const validMarks = markedArr.every(n => hostDrawnSet.has(n));
-            const hasWin = myTicket.frames.some(frame =>
-                checkFullCardWin(frame, markedNumbers) || frame.some(row => checkRowWin(row, markedNumbers))
-            );
-            if (validMarks && hasWin) {
-                const winnerData: WinnerData = {
-                    name: playerName,
-                    isHost: true,
-                    ticket: myTicket,
-                    markedNumbers: markedArr,
-                };
-                channelRef.current?.send({ type: 'broadcast', event: 'game_end', payload: { winner: winnerData } });
-                setWinner(winnerData);
+            const result = validateWinRequest(request, drawnNumbersRef.current);
+            if (result.valid) {
+                channelRef.current?.send({ type: 'broadcast', event: 'game_end', payload: { winner: result.winner } });
+                setWinner(result.winner);
                 setGameStatus('ended');
                 gameStatusRef.current = 'ended';
             } else {
