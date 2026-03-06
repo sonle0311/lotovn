@@ -50,6 +50,8 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const [keepTicketPref, setKeepTicketPref] = useState<boolean>(false);
     // Session win counter persisted to localStorage
     const [sessionWins, setSessionWins] = useState<number>(0);
+    // Emoji reactions floating display
+    const [incomingReactions, setIncomingReactions] = useState<{ id: string; emoji: string; senderName: string }[]>([]);
 
     const channelRef = useRef<RealtimeChannel | null>(null);
     const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -336,6 +338,14 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                     setCurrentNumber(payload.currentNumber);
                     gameStatusRef.current = payload.gameStatus;
                 }
+            })
+            .on('broadcast', { event: 'emoji_reaction' }, ({ payload }) => {
+                const reaction = payload as { id: string; emoji: string; senderName: string };
+                setIncomingReactions(prev => [...prev, reaction]);
+                // Auto-remove sau 2.5s
+                setTimeout(() => {
+                    setIncomingReactions(prev => prev.filter(r => r.id !== reaction.id));
+                }, 2500);
             });
 
         channel.subscribe(async (status) => {
@@ -582,6 +592,24 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const toggleKeepTicket = useCallback((val?: boolean) =>
         setKeepTicketPref(p => val !== undefined ? val : !p), []);
 
+    const sendReaction = useCallback((emoji: string) => {
+        const reaction = {
+            id: Math.random().toString(36).substring(2, 9),
+            emoji,
+            senderName: playerName,
+        };
+        channelRef.current?.send({
+            type: 'broadcast',
+            event: 'emoji_reaction',
+            payload: reaction,
+        });
+        // Show locally too (broadcast doesn't echo)
+        setIncomingReactions(prev => [...prev, reaction]);
+        setTimeout(() => {
+            setIncomingReactions(prev => prev.filter(r => r.id !== reaction.id));
+        }, 2500);
+    }, [playerName]);
+
     return {
         players,
         messages,
@@ -610,5 +638,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         toggleKeepTicket,
         forceRegenerateTicket,
         sessionWins,
+        incomingReactions,
+        sendReaction,
     };
 };

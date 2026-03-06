@@ -11,10 +11,15 @@ import AdminControls from "@/components/AdminControls";
 import NumberPoolGrid from "@/components/NumberPoolGrid";
 import ShopeeAffiliateCTA from "@/components/ShopeeAffiliateCTA";
 import { AdsterraBanner } from "@/components/AdsterraBanner";
+import EmojiReactions from "@/components/EmojiReactions";
+import ShareRoom from "@/components/ShareRoom";
+import SoundControl from "@/components/SoundControl";
+import ThemeSelector from "@/components/ThemeSelector";
+import { DEFAULT_THEME_ID } from "@/lib/ticket-themes";
 import { useEffect, useState, useMemo } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Share2, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
+import { Home, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 const FUNNY_PHRASES = [
@@ -132,12 +137,22 @@ export default function GameRoom() {
         toggleKeepTicket,
         forceRegenerateTicket,
         sessionWins,
+        incomingReactions,
+        sendReaction,
     } = useGameRoom(roomId, playerName);
 
     const [hasDeclaredWin, setHasDeclaredWin] = useState(false);
     const [lastWaitingSignature, setLastWaitingSignature] = useState<string>("");
     const [activeTab, setActiveTab] = useState<'game' | 'players' | 'chat'>('game');
+    const [isMuted, setIsMuted] = useState(false);
+    const [themeId, setThemeId] = useState<string>(() => {
+        if (typeof window !== 'undefined') return localStorage.getItem('loto-theme') || DEFAULT_THEME_ID;
+        return DEFAULT_THEME_ID;
+    });
     const drawnNumbersSet = useMemo(() => new Set(drawnNumbers), [drawnNumbers]);
+
+    // Persist theme preference
+    useEffect(() => { localStorage.setItem('loto-theme', themeId); }, [themeId]);
 
     // Lock body scroll khi winner modal mở — fix double scrollbar
     useEffect(() => {
@@ -285,13 +300,6 @@ export default function GameRoom() {
         }
     }, [waitingKinhPlayer, playerName]);
 
-    const copyRoomCode = () => {
-        const url = `${window.location.origin}/room/${roomId}`;
-        navigator.clipboard.writeText(url)
-            .then(() => toast.info("Đã sao chép link phòng!"))
-            .catch(() => toast.error("Không thể sao chép. Link: " + url));
-    };
-
     const winnerMarkedSet = useMemo(
         () => new Set(winner?.markedNumbers ?? []),
         [winner]
@@ -344,13 +352,8 @@ export default function GameRoom() {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={copyRoomCode}
-                            className="bg-white/5 p-2.5 rounded-2xl border border-white/10 text-yellow-500 btn-tactile transition-all"
-                            aria-label="Chia sẻ mã phòng"
-                        >
-                            <Share2 size={18} />
-                        </button>
+                        <SoundControl isMuted={isMuted} onToggleMute={() => setIsMuted(p => !p)} />
+                        <ShareRoom roomId={roomId} />
                     </div>
                 </div>
 
@@ -454,6 +457,7 @@ export default function GameRoom() {
                                         currentNumber={currentNumber}
                                         markedNumbers={markedNumbers}
                                         onMark={toggleMark}
+                                        themeId={themeId}
                                     />
                                 </div>
 
@@ -468,6 +472,9 @@ export default function GameRoom() {
                                             <Shuffle size={18} className="animate-pulse" />
                                             <span>Đổi Vé</span>
                                         </button>
+
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-2">Theme vé</span>
+                                        <ThemeSelector currentThemeId={themeId} onSelect={setThemeId} />
 
                                         {/* Shopee affiliate + Adsterra — chỉ hiện khi chờ game bắt đầu */}
                                         <ShopeeAffiliateCTA variant="waiting" />
@@ -501,26 +508,36 @@ export default function GameRoom() {
                                 )}
 
                                 {/* Mobile Condensed Chat - Show at bottom of game tab */}
-                                <div className="lg:hidden w-full h-[200px] mt-2 mb-32">
-                                    <ChatBox
-                                        messages={messages.slice(-5)}
-                                        onSendMessage={sendMessage}
-                                        playerName={playerName}
-                                        chatCooldown={chatCooldown}
-                                    />
+                                <div className="lg:hidden w-full mt-2 mb-32">
+                                    <div className="flex gap-1.5 mb-2 justify-center">
+                                        <EmojiReactions onReact={sendReaction} incomingReactions={incomingReactions} />
+                                    </div>
+                                    <div className="h-[200px]">
+                                        <ChatBox
+                                            messages={messages.slice(-5)}
+                                            onSendMessage={sendMessage}
+                                            playerName={playerName}
+                                            chatCooldown={chatCooldown}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* 3. Right Sidebar: Chat - Show full chat on mobile if chat tab is active, or persistent on desktop */}
-                    <div className={`${activeTab === 'chat' ? "block" : "hidden lg:block"} lg:col-span-3 order-3 h-[500px] lg:h-auto`}>
-                        <ChatBox
-                            messages={messages}
-                            onSendMessage={sendMessage}
-                            playerName={playerName}
-                            chatCooldown={chatCooldown}
-                        />
+                    <div className={`${activeTab === 'chat' ? "block" : "hidden lg:block"} lg:col-span-3 order-3 space-y-2`}>
+                        <div className="hidden lg:flex gap-1.5 justify-center glass-card p-2 border-white/5">
+                            <EmojiReactions onReact={sendReaction} incomingReactions={[]} />
+                        </div>
+                        <div className="h-[500px] lg:h-auto">
+                            <ChatBox
+                                messages={messages}
+                                onSendMessage={sendMessage}
+                                playerName={playerName}
+                                chatCooldown={chatCooldown}
+                            />
+                        </div>
                     </div>
 
                     {/* Mobile Player List Tab */}
@@ -602,6 +619,7 @@ export default function GameRoom() {
                                         currentNumber={null}
                                         markedNumbers={winnerMarkedSet}
                                         readOnly
+                                        themeId={themeId}
                                     />
                                 </div>
                             )}

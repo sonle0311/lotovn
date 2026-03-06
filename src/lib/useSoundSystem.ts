@@ -116,7 +116,7 @@ export function useSoundSystem(isMuted: boolean) {
         }
         const audio = new Audio(ttsProxyUrl(text));
         ttsAudioRef.current = audio;
-        audio.play().catch(() => {/* silently ignore autoplay policy errors */});
+        audio.play().catch(() => {/* silently ignore autoplay policy errors */ });
       }
     },
     [isMuted]
@@ -178,5 +178,48 @@ export function useSoundSystem(isMuted: boolean) {
     });
   }, [isMuted, getCtx]);
 
-  return { announceNumber, playDrawBeep, playWinFanfare };
+  /**
+   * Short click sound when marking a cell (300 Hz, 80ms).
+   */
+  const playMarkSound = useCallback(() => {
+    if (isMuted) return;
+    const ctx = getCtx();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 300;
+    osc.type = "triangle";
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.08);
+  }, [isMuted, getCtx]);
+
+  /**
+   * Ascending two-tone chime when a player joins (440→660 Hz).
+   */
+  const playJoinSound = useCallback(() => {
+    if (isMuted) return;
+    const ctx = getCtx();
+    if (!ctx) return;
+
+    [440, 660].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      const t = ctx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+  }, [isMuted, getCtx]);
+
+  return { announceNumber, playDrawBeep, playWinFanfare, playMarkSound, playJoinSound };
 }

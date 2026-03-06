@@ -3,6 +3,8 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
 import { LotoTicket } from "@/lib/gameLogic";
+import type { TicketTheme } from "@/lib/ticket-themes";
+import { getThemeById, DEFAULT_THEME_ID } from "@/lib/ticket-themes";
 
 interface LotoCardProps {
     ticket: LotoTicket;
@@ -11,6 +13,7 @@ interface LotoCardProps {
     markedNumbers: Set<number>;
     onMark?: (num: number, isDrawn: boolean) => void;
     readOnly?: boolean;
+    themeId?: string;
 }
 
 interface LotoCellProps {
@@ -52,14 +55,15 @@ const LotoCell = memo(function LotoCell({ num, isDrawn, isMarked, isCurrent, onM
     );
 });
 
-const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, markedNumbers, onMark, readOnly }: LotoCardProps) {
+const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, markedNumbers, onMark, readOnly, themeId }: LotoCardProps) {
     if (!ticket) return null;
+    const theme = getThemeById(themeId || DEFAULT_THEME_ID);
 
     return (
         <div className="w-full max-w-full mx-auto px-1 sm:px-4">
             <div
                 className="paper-ticket w-full border-[2px] sm:border-[4px] border-black rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden transition-all scanlines grain"
-                style={{ backgroundColor: ticket.color }}
+                style={{ backgroundColor: theme.bgColor, borderColor: theme.borderColor }}
             >
                 {/* Decorative Elements */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-3xl pointer-events-none" />
@@ -68,9 +72,9 @@ const LotoCard = memo(function LotoCard({ ticket, drawnNumbers, currentNumber, m
                 {/* Main Ticket Header */}
                 <div className="relative z-10 flex justify-between items-center py-2 sm:py-3 px-3 sm:px-4 border-b-[2px] sm:border-b-[3px] border-black/80 bg-black/5">
                     <div className="flex flex-col">
-                        <span className="text-[8px] sm:text-[10px] font-black text-black/60 uppercase tracking-[0.2em] mb-0.5 sm:mb-1">PREMIUM LOTO VIỆT NAM</span>
-                        <h2 className="text-xl sm:text-3xl font-black text-black uppercase leading-none tracking-tighter">
-                            LÔ TÔ <span className="text-red-800">TẾT</span>
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] mb-0.5 sm:mb-1" style={{ color: theme.footerText }}>PREMIUM LOTO VIỆT NAM</span>
+                        <h2 className="text-xl sm:text-3xl font-black uppercase leading-none tracking-tighter" style={{ color: theme.headerText }}>
+                            {theme.title} <span style={{ color: theme.accentColor }}>{theme.subtitle}</span>
                         </h2>
                     </div>
                     <div className="flex flex-col items-end">
