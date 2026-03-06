@@ -23,6 +23,15 @@ const ALL_KEYS = [
     'sound.mute', 'sound.unmute',
     'leaderboard.title',
     'lobby.title', 'lobby.join', 'lobby.empty',
+    // Landing page
+    'landing.name_label', 'landing.name_placeholder', 'landing.room_label',
+    'landing.room_placeholder', 'landing.join_btn', 'landing.or',
+    'landing.create_btn', 'landing.public_rooms', 'landing.hero_desc',
+    'landing.hero_cta', 'landing.err_name', 'landing.err_room', 'landing.err_create',
+    // Room page
+    'room.title_prefix', 'room.drawing', 'room.ended_label', 'room.waiting_label',
+    'room.your_ticket', 'room.new_number', 'room.new_game', 'room.waiting_host',
+    'room.game_mode',
 ];
 
 describe('i18n', () => {
@@ -195,7 +204,7 @@ describe('i18n', () => {
         });
 
         it('should have correct number of translation keys', () => {
-            expect(ALL_KEYS.length).toBe(29);
+            expect(ALL_KEYS.length).toBe(51);
         });
     });
 

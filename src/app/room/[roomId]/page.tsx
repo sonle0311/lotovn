@@ -27,6 +27,7 @@ import { sendNotification } from "@/components/NotificationPrompt";
 import { saveGameResult } from "@/lib/game-service";
 import { addXu, WIN_REWARD, PLAY_REWARD } from "@/lib/wallet-service";
 import { DEFAULT_THEME_ID } from "@/lib/ticket-themes";
+import { t, getLocale } from "@/lib/i18n";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -165,6 +166,9 @@ export default function GameRoom() {
 
     // Voice chat
     const { isVoiceActive, isMicMuted, voicePeers, joinVoice, leaveVoice, toggleMic } = useVoiceChat(roomId, playerName);
+
+    // Sync locale from localStorage
+    useEffect(() => { getLocale(); }, []);
 
     // Persist theme preference
     useEffect(() => { localStorage.setItem('loto-theme', themeId); }, [themeId]);
@@ -375,12 +379,12 @@ export default function GameRoom() {
                     <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none sm:pointer-events-auto">
                         <div className="inline-flex flex-col items-center">
                             <h1 className="text-xl sm:text-2xl font-black text-yellow-500 tracking-tighter leading-none mb-1">
-                                PHÒNG: {roomId}
+                                {t('room.title_prefix')}: {roomId}
                             </h1>
                             <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full ${gameStatus === 'playing' ? "bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" : "bg-yellow-500"}`} />
                                 <p className="text-[10px] uppercase font-black text-white/50 tracking-widest">
-                                    {gameStatus === 'playing' ? "Đang xổ" : gameStatus === 'ended' ? "Kết thúc" : "Chờ bắt đầu"} • <span className="text-yellow-500/80">{playerName}</span>
+                                    {gameStatus === 'playing' ? t('room.drawing') : gameStatus === 'ended' ? t('room.ended_label') : t('room.waiting_label')} • <span className="text-yellow-500/80">{playerName}</span>
                                 </p>
                             </div>
                         </div>
@@ -413,7 +417,7 @@ export default function GameRoom() {
                             className="fixed top-24 right-4 z-[60] pointer-events-none"
                         >
                             <div className="bg-red-900 shadow-[0_0_30px_rgba(245,158,11,0.3)] border-2 border-yellow-500 p-2 sm:p-4 rounded-full flex flex-col items-center justify-center min-w-[70px] sm:min-w-[90px] aspect-square transform hover:scale-105 transition-transform duration-300 pointer-events-auto">
-                                <span className="text-[10px] font-black uppercase text-yellow-500/70 tracking-widest leading-none mb-1">Số mới</span>
+                                <span className="text-[10px] font-black uppercase text-yellow-500/70 tracking-widest leading-none mb-1">{t('room.new_number')}</span>
                                 <span
                                     className="text-3xl sm:text-4xl font-black text-yellow-500 leading-none drop-shadow-glow"
                                     aria-live="polite"
@@ -443,7 +447,7 @@ export default function GameRoom() {
                                 : "text-white/40"
                                 }`}
                         >
-                            {tab === 'game' ? "Xổ số" : tab === 'players' ? "Bạn chơi" : "Chat"}
+                            {tab === 'game' ? t('game.playing') : tab === 'players' ? t('player.name') : t('chat.title')}
                         </button>
                     ))}
                 </div>
@@ -457,7 +461,7 @@ export default function GameRoom() {
                             <div className="w-full space-y-3">
                                 {gameStatus === 'waiting' && (
                                     <div className="glass-card p-3 border-white/5 space-y-2">
-                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Chế độ chơi</span>
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{t('room.game_mode')}</span>
                                         <GameModeSelector
                                             currentMode={gameMode}
                                             onSelect={setGameMode}

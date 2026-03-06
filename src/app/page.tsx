@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/lib/room-service";
 import { Play, Users, Star, Globe } from "lucide-react";
@@ -10,6 +10,7 @@ import ShopeeAffiliateCTA from "@/components/ShopeeAffiliateCTA";
 import { AdsterraBanner } from "@/components/AdsterraBanner";
 import WalletBadge from "@/components/WalletBadge";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { t, getLocale } from "@/lib/i18n";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -18,15 +19,22 @@ export default function LandingPage() {
   const [error, setError] = useState("");
   const [isHovering, setIsHovering] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  // SSR-safe: force re-render after locale read from localStorage
+  const [, setLocaleReady] = useState(false);
+
+  useEffect(() => {
+    getLocale(); // sync currentLocale from localStorage
+    setLocaleReady(true);
+  }, []);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!playerName.trim()) {
-      setError("Vui lòng nhập tên của bạn");
+      setError(t('landing.err_name'));
       return;
     }
     if (!roomId.trim()) {
-      setError("Vui lòng nhập mã phòng");
+      setError(t('landing.err_room'));
       return;
     }
     router.push(`/room/${roomId}?name=${encodeURIComponent(playerName.trim())}`);
@@ -34,7 +42,7 @@ export default function LandingPage() {
 
   const handleCreate = async () => {
     if (!playerName.trim()) {
-      setError("Vui lòng nhập tên của bạn");
+      setError(t('landing.err_name'));
       return;
     }
     const arr = new Uint8Array(5);
@@ -45,10 +53,9 @@ export default function LandingPage() {
     setIsCreating(true);
     try {
       await createRoom(newRoomId, trimmedName);
-      // No &host=true — host identity now resolved from DB
       router.push(`/room/${newRoomId}?name=${encodeURIComponent(trimmedName)}`);
     } catch {
-      setError("Không thể tạo phòng. Vui lòng thử lại.");
+      setError(t('landing.err_create'));
     } finally {
       setIsCreating(false);
     }
@@ -138,7 +145,7 @@ export default function LandingPage() {
               transition={{ delay: 0.5 }}
               className="text-yellow-100/60 font-medium text-sm sm:text-base max-w-md tracking-wide"
             >
-              Trải nghiệm không gian văn hóa dân gian kết hợp công nghệ hiện đại. <span className="text-yellow-400 font-bold">Chơi ngay, lộc về tay!</span>
+              {t('landing.hero_desc')} <span className="text-yellow-400 font-bold">{t('landing.hero_cta')}</span>
             </motion.p>
           </div>
 
@@ -160,29 +167,29 @@ export default function LandingPage() {
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="playerName" className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80 ml-1">Định danh (Tên)</label>
+                    <label htmlFor="playerName" className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80 ml-1">{t('landing.name_label')}</label>
                     <input
                       id="playerName"
                       type="text"
-                      placeholder="VD: Công Tử Bạc Liêu"
+                      placeholder={t('landing.name_placeholder')}
                       value={playerName}
                       onChange={(e) => { setPlayerName(e.target.value); setError(""); }}
                       maxLength={20}
-                      aria-label="Nhập tên người chơi"
+                      aria-label={t('player.name')}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="roomId" className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80 ml-1">Mã Phòng</label>
+                    <label htmlFor="roomId" className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80 ml-1">{t('landing.room_label')}</label>
                     <input
                       id="roomId"
                       type="text"
-                      placeholder="Nhập mã hoặc để trống..."
+                      placeholder={t('landing.room_placeholder')}
                       value={roomId}
                       onChange={(e) => { setRoomId(e.target.value.toUpperCase()); setError(""); }}
                       maxLength={10}
-                      aria-label="Nhập mã phòng"
+                      aria-label={t('room.code')}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold tracking-widest"
                     />
                   </div>
@@ -195,25 +202,25 @@ export default function LandingPage() {
                 )}
 
                 <div className="pt-2 flex flex-col gap-3">
-                  <button onClick={handleJoin} aria-label="Tham gia phòng chơi" className="w-full py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl text-[#3b0707] font-black text-lg shadow-[0_8px_20px_rgba(234,179,8,0.3)] hover:shadow-[0_12px_30px_rgba(234,179,8,0.5)] hover:-translate-y-1 transition-all active:translate-y-0 active:shadow-none flex items-center justify-center gap-2 group/btn">
+                  <button onClick={handleJoin} aria-label={t('room.join')} className="w-full py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl text-[#3b0707] font-black text-lg shadow-[0_8px_20px_rgba(234,179,8,0.3)] hover:shadow-[0_12px_30px_rgba(234,179,8,0.5)] hover:-translate-y-1 transition-all active:translate-y-0 active:shadow-none flex items-center justify-center gap-2 group/btn">
                     <Users className="w-5 h-5" />
-                    <span>THAM GIA NGAY</span>
+                    <span>{t('landing.join_btn')}</span>
                   </button>
 
                   <div className="relative flex py-2 items-center">
                     <div className="grow border-t border-white/10"></div>
-                    <span className="shrink-0 mx-4 text-white/20 text-[10px] uppercase font-black tracking-widest">Hoặc</span>
+                    <span className="shrink-0 mx-4 text-white/20 text-[10px] uppercase font-black tracking-widest">{t('landing.or')}</span>
                     <div className="grow border-t border-white/10"></div>
                   </div>
 
-                  <button onClick={handleCreate} disabled={isCreating} aria-label="Tạo một phòng chơi mới" className="w-full py-3.5 bg-white/5 border border-white/10 rounded-xl text-yellow-500 font-bold text-base hover:bg-white/10 hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 group/btn2 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button onClick={handleCreate} disabled={isCreating} aria-label={t('room.create')} className="w-full py-3.5 bg-white/5 border border-white/10 rounded-xl text-yellow-500 font-bold text-base hover:bg-white/10 hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 group/btn2 disabled:opacity-50 disabled:cursor-not-allowed">
                     <Play className="w-4 h-4 fill-current" />
-                    <span>TẠO PHÒNG MỚI</span>
+                    <span>{t('landing.create_btn')}</span>
                   </button>
 
-                  <button onClick={() => router.push('/lobby')} aria-label="Xem phòng public" className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 font-bold text-sm hover:bg-white/10 hover:text-white/70 transition-all flex items-center justify-center gap-2">
+                  <button onClick={() => router.push('/lobby')} aria-label={t('lobby.title')} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 font-bold text-sm hover:bg-white/10 hover:text-white/70 transition-all flex items-center justify-center gap-2">
                     <Globe className="w-4 h-4" />
-                    <span>PHÒNG CÔNG KHAI</span>
+                    <span>{t('landing.public_rooms')}</span>
                   </button>
 
                   {/* Settings row */}
@@ -249,5 +256,3 @@ export default function LandingPage() {
     </>
   );
 }
-
-
