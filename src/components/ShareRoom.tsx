@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useRef } from "react";
+import { memo, useState, useRef, useEffect } from "react";
 import { Share2, Copy, Check, X, QrCode } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -12,8 +12,12 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [mounted, setMounted] = useState(false);
 
-    const roomUrl = typeof window !== "undefined"
+    useEffect(() => { setMounted(true); }, []);
+
+    // SSR-safe URL
+    const roomUrl = mounted
         ? `${window.location.origin}/room/${roomId}`
         : `/room/${roomId}`;
 
@@ -23,7 +27,6 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            // Fallback for older browsers
             const input = document.createElement("input");
             input.value = roomUrl;
             document.body.appendChild(input);
@@ -51,9 +54,9 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
         }
     };
 
-    // Simple QR code using canvas (no external dependency)
-    const generateQR = () => {
-        if (!canvasRef.current) return;
+    // Auto-generate QR when dialog opens
+    useEffect(() => {
+        if (!isOpen || !canvasRef.current) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -62,32 +65,27 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
         canvas.width = size;
         canvas.height = size;
 
-        // Simple pattern — just display room code prominently
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, size, size);
 
-        // Border
         ctx.strokeStyle = "#dc2626";
         ctx.lineWidth = 8;
         ctx.strokeRect(4, 4, size - 8, size - 8);
 
-        // Room ID
         ctx.fillStyle = "#000";
         ctx.font = "bold 32px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(roomId, size / 2, size / 2 - 20);
 
-        // URL text
         ctx.fillStyle = "#666";
         ctx.font = "11px sans-serif";
-        ctx.fillText("lotovn.vercel.app", size / 2, size / 2 + 20);
+        ctx.fillText("lotovn.online", size / 2, size / 2 + 20);
 
-        // Label
         ctx.fillStyle = "#dc2626";
         ctx.font = "bold 14px sans-serif";
         ctx.fillText("🧧 Mã Phòng Lô Tô", size / 2, size / 2 + 50);
-    };
+    }, [isOpen, roomId]);
 
     return (
         <>
@@ -129,7 +127,7 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
                                 <p className="text-3xl font-black text-yellow-400 tracking-wider font-mono">{roomId}</p>
                             </div>
 
-                            {/* QR Canvas */}
+                            {/* QR Canvas — auto-generates on open */}
                             <div className="flex justify-center mb-4">
                                 <canvas
                                     ref={canvasRef}
@@ -137,12 +135,6 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
                                     width={200}
                                     height={200}
                                 />
-                                <button
-                                    onClick={generateQR}
-                                    className="absolute mt-[170px] flex items-center gap-1 px-2 py-1 bg-black/60 rounded-lg text-[10px] text-white/60 hover:text-white"
-                                >
-                                    <QrCode size={12} />Tạo QR
-                                </button>
                             </div>
 
                             {/* URL + Copy */}

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Users, Crown } from "lucide-react";
 import { Player } from "@/lib/useGameRoom";
+import { t } from "@/lib/i18n";
 
 interface PlayerListProps {
     players: Player[];
@@ -53,8 +54,8 @@ const PlayerList = memo(function PlayerList({ players, currentPlayerName, sessio
                                 player.status === 'playing' ? 'bg-green-500/20 text-green-500' :
                                     'bg-white/10 text-white/40'
                                 }`}>
-                                {player.status === 'won' ? 'KINH!' :
-                                    player.status === 'playing' ? 'Đang chơi' : 'Chờ...'}
+                                {player.status === 'won' ? t('game.kinh') :
+                                    player.status === 'playing' ? t('game.playing') : t('game.waiting')}
                             </span>
                         </div>
                     </div>

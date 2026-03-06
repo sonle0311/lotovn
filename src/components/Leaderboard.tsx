@@ -3,6 +3,7 @@
 import { memo, useEffect, useState } from "react";
 import { Trophy, TrendingUp } from "lucide-react";
 import { getRoomLeaderboard, type LeaderboardEntry } from "@/lib/game-service";
+import { t } from "@/lib/i18n";
 
 interface LeaderboardProps {
     roomId: string;
@@ -39,7 +40,7 @@ const Leaderboard = memo(function Leaderboard({ roomId }: LeaderboardProps) {
         <div className="glass-card border-white/5 overflow-hidden">
             <div className="bg-white/5 p-2 sm:p-3 flex items-center gap-2 border-b border-white/10">
                 <Trophy size={16} className="text-yellow-500" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80">Bảng Xếp Hạng</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80">{t('leaderboard.title')}</h3>
             </div>
             <div className="p-2 space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
                 {entries.map((entry, i) => (

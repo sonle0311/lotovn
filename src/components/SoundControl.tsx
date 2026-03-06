@@ -1,7 +1,8 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 interface SoundControlProps {
     isMuted: boolean;
@@ -16,10 +17,10 @@ const SoundControl = memo(function SoundControl({ isMuted, onToggleMute }: Sound
                 ? "bg-red-500/20 border-red-500/30 text-red-400"
                 : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
                 }`}
-            title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+            title={isMuted ? t('sound.unmute') : t('sound.mute')}
         >
             {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-            <span className="hidden sm:inline">{isMuted ? "Tắt tiếng" : "Có tiếng"}</span>
+            <span className="hidden sm:inline">{isMuted ? t('sound.mute') : t('sound.unmute')}</span>
         </button>
     );
 });

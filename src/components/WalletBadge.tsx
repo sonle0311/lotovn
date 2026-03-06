@@ -6,7 +6,7 @@ import { getBalance, checkDailyBonus } from "@/lib/wallet-service";
 import { toast } from "sonner";
 
 const WalletBadge = memo(function WalletBadge() {
-    const [balance, setBalance] = useState(0);
+    const [balance, setBalance] = useState<number | null>(null);
     const [showBonus, setShowBonus] = useState(false);
 
     useEffect(() => {
@@ -19,6 +19,9 @@ const WalletBadge = memo(function WalletBadge() {
             setTimeout(() => setShowBonus(false), 3000);
         }
     }, []);
+
+    // SSR-safe: don't render until client-side balance is loaded
+    if (balance === null) return null;
 
     return (
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">

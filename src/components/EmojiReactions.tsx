@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const EMOJI_LIST = ["👏", "🔥", "😭", "🎉", "😱", "💀"] as const;
@@ -12,10 +12,19 @@ interface EmojiReactionsProps {
 
 const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions }: EmojiReactionsProps) {
     const [lastReactTime, setLastReactTime] = useState(0);
+    const [dimensions, setDimensions] = useState({ w: 400, h: 800 });
+
+    // SSR-safe: read window dimensions only after mount
+    useEffect(() => {
+        setDimensions({ w: window.innerWidth, h: window.innerHeight });
+        const handleResize = () => setDimensions({ w: window.innerWidth, h: window.innerHeight });
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleReact = useCallback((emoji: string) => {
         const now = Date.now();
-        if (now - lastReactTime < 1000) return; // 1 reaction/giây
+        if (now - lastReactTime < 1000) return;
         setLastReactTime(now);
         onReact(emoji);
     }, [lastReactTime, onReact]);
@@ -44,13 +53,13 @@ const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions
                             key={reaction.id}
                             initial={{
                                 opacity: 1,
-                                y: window.innerHeight - 100,
-                                x: Math.random() * (window.innerWidth - 60) + 30,
+                                y: dimensions.h - 100,
+                                x: Math.random() * (dimensions.w - 60) + 30,
                                 scale: 0.5,
                             }}
                             animate={{
                                 opacity: 0,
-                                y: window.innerHeight * 0.3,
+                                y: dimensions.h * 0.3,
                                 scale: 1.5,
                             }}
                             exit={{ opacity: 0 }}

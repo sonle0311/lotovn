@@ -6,6 +6,7 @@ import { getPublicRooms } from "@/lib/game-service";
 import { GAME_MODE_LABELS, type GameMode } from "@/lib/gameLogic";
 import { Users, Play, RefreshCw, Home } from "lucide-react";
 import { motion } from "framer-motion";
+import { t, getLocale } from "@/lib/i18n";
 
 interface PublicRoom {
     room_id: string;
@@ -21,19 +22,29 @@ export default function LobbyPage() {
     const [rooms, setRooms] = useState<PublicRoom[]>([]);
     const [loading, setLoading] = useState(true);
     const [playerName, setPlayerName] = useState("");
+    const [error, setError] = useState(false);
+
+    useEffect(() => { getLocale(); }, []);
 
     const fetchRooms = async () => {
         setLoading(true);
-        const data = await getPublicRooms();
-        setRooms(data as PublicRoom[]);
-        setLoading(false);
+        setError(false);
+        try {
+            const data = await getPublicRooms();
+            setRooms(data as PublicRoom[]);
+        } catch {
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => { fetchRooms(); }, []);
 
     const joinRoom = (roomId: string) => {
-        if (!playerName.trim()) return;
-        router.push(`/room/${roomId}?name=${encodeURIComponent(playerName.trim())}`);
+        const cleanName = playerName.replace(/['"`;\\<>{}]/g, '').trim().slice(0, 20);
+        if (!cleanName) return;
+        router.push(`/room/${roomId}?name=${encodeURIComponent(cleanName)}`);
     };
 
     return (
@@ -42,14 +53,14 @@ export default function LobbyPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h1 className="text-2xl font-black text-yellow-400">🏠 Phòng Chơi</h1>
-                        <p className="text-xs text-white/40">Chọn phòng public để tham gia</p>
+                        <h1 className="text-2xl font-black text-yellow-400">🏠 {t('lobby.title')}</h1>
+                        <p className="text-xs text-white/40">{t('landing.public_rooms')}</p>
                     </div>
                     <div className="flex gap-2">
                         <button
                             onClick={fetchRooms}
                             className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all"
-                            title="Làm mới"
+                            title="Refresh"
                         >
                             <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                         </button>
@@ -68,7 +79,7 @@ export default function LobbyPage() {
                         type="text"
                         value={playerName}
                         onChange={(e) => setPlayerName(e.target.value)}
-                        placeholder="Nhập tên của bạn..."
+                        placeholder={t('landing.name_placeholder')}
                         maxLength={20}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
                     />
@@ -78,15 +89,21 @@ export default function LobbyPage() {
                 <div className="space-y-3">
                     {loading && (
                         <div className="glass-card p-8 border-white/5 text-center">
-                            <p className="text-sm text-white/40 animate-pulse">Đang tải phòng...</p>
+                            <p className="text-sm text-white/40 animate-pulse">{t('game.waiting')}...</p>
                         </div>
                     )}
 
-                    {!loading && rooms.length === 0 && (
+                    {!loading && error && (
+                        <div className="glass-card p-8 border-white/5 text-center">
+                            <p className="text-sm text-red-400">Failed to load rooms</p>
+                            <button onClick={fetchRooms} className="mt-2 text-xs text-yellow-500 underline">Retry</button>
+                        </div>
+                    )}
+
+                    {!loading && !error && rooms.length === 0 && (
                         <div className="glass-card p-8 border-white/5 text-center">
                             <Users size={32} className="mx-auto mb-3 text-white/20" />
-                            <p className="text-sm text-white/40">Chưa có phòng nào đang mở</p>
-                            <p className="text-xs text-white/20 mt-1">Tạo phòng mới tại trang chủ</p>
+                            <p className="text-sm text-white/40">{t('lobby.empty')}</p>
                         </div>
                     )}
 
@@ -100,11 +117,11 @@ export default function LobbyPage() {
                         >
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-white truncate">
-                                    {room.display_name || `Phòng ${room.room_id}`}
+                                    {room.display_name || `${t('room.title_prefix')} ${room.room_id}`}
                                 </p>
                                 <div className="flex items-center gap-3 mt-1">
                                     <span className="text-[10px] text-white/40">
-                                        Host: {room.host_name}
+                                        {t('player.host')}: {room.host_name}
                                     </span>
                                     <span className="text-[10px] text-yellow-500/60">
                                         {GAME_MODE_LABELS[(room.game_mode || 'row') as GameMode] || room.game_mode}
@@ -121,7 +138,7 @@ export default function LobbyPage() {
                                 className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:bg-white/10 disabled:text-white/20 text-red-950 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
                             >
                                 <Play size={14} />
-                                Vào
+                                {t('lobby.join')}
                             </button>
                         </motion.div>
                     ))}
