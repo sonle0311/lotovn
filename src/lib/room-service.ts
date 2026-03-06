@@ -5,15 +5,12 @@ import { supabase } from './supabaseClient';
  * Uses ON CONFLICT DO NOTHING pattern to handle race conditions.
  * Returns true if this client is the original creator (first to insert).
  *
- * PREREQUISITE: Run SQL migration in Supabase Dashboard:
- *   CREATE TABLE IF NOT EXISTS rooms (
- *     room_id TEXT PRIMARY KEY,
- *     host_name TEXT NOT NULL,
- *     created_at TIMESTAMPTZ DEFAULT NOW()
- *   );
- *   ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
- *   CREATE POLICY "read_rooms" ON rooms FOR SELECT USING (true);
- *   CREATE POLICY "insert_rooms" ON rooms FOR INSERT WITH CHECK (true);
+ * PREREQUISITE: Run SQL migration `src/lib/supabase-migrations/001_rooms_policy.sql`
+ *   in Supabase Dashboard → SQL Editor.
+ *
+ *   Schema: rooms (room_id TEXT PK, host_name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())
+ *   RLS: "read_recent_rooms" SELECT WHERE created_at > now() - 24h
+ *        "throttled_insert" INSERT WHERE global count < 100/hour
  */
 export async function createRoom(
     roomId: string,

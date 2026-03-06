@@ -71,7 +71,7 @@ const NumberDrawing = memo(function NumberDrawing({ currentNumber, drawnNumbers 
                         animate={{ opacity: 1, y: 0 }}
                         className="text-lg sm:text-xl font-black text-yellow-400 text-center italic mb-4 sm:mb-6 drop-shadow-md z-10"
                     >
-                        "{formatNumberVietnamese(currentNumber).split(' – ')[0]}"
+                        {`"${formatNumberVietnamese(currentNumber).split(' – ')[0]}"`}
                     </motion.div>
                 )}
             </AnimatePresence>

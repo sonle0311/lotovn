@@ -1,12 +1,11 @@
 "use client";
 
-import { Play, Pause, RotateCcw, FastForward, Settings } from "lucide-react";
+import { Play, Pause, FastForward, Settings } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface AdminControlsProps {
     onStart: () => void;
     onDraw: (num: number) => void;
-    onReset: () => void;
     gameStatus: 'waiting' | 'playing' | 'ended';
     drawnNumbers: number[];
 }
@@ -25,7 +24,7 @@ const SPEED_PRESETS = [
     { label: "Nhanh", seconds: 3 },
 ] as const;
 
-export default function AdminControls({ onStart, onDraw, onReset, gameStatus, drawnNumbers }: AdminControlsProps) {
+export default function AdminControls({ onStart, onDraw, gameStatus, drawnNumbers }: AdminControlsProps) {
     const [autoDraw, setAutoDraw] = useState(false);
     const [drawInterval, setDrawInterval] = useState(5); // seconds
     const [countdown, setCountdown] = useState(0);

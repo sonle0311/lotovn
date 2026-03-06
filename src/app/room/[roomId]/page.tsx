@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
-import { useGameRoom, WinnerData, MAX_PLAYERS } from "@/lib/useGameRoom";
+import { useGameRoom, MAX_PLAYERS } from "@/lib/useGameRoom";
 import { checkRowWin, checkFullCardWin, getCardWaitingNumbers } from "@/lib/gameLogic";
 import LotoCard from "@/components/LotoCard";
 import NumberDrawing from "@/components/NumberDrawing";
@@ -409,7 +409,6 @@ export default function GameRoom() {
                                 <AdminControls
                                     onStart={startGame}
                                     onDraw={drawNumber}
-                                    onReset={resetGame}
                                     gameStatus={gameStatus}
                                     drawnNumbers={drawnNumbers}
                                 />
