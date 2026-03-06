@@ -109,6 +109,15 @@ export default function RootLayout({
       <body className={`${inter.className} bg-red-950 text-white min-h-screen overflow-x-hidden`} suppressHydrationWarning>
         {children}
         <Toaster richColors position="top-right" />
+        {/* Register PWA Service Worker */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js');
+            });
+          }
+        ` }} />
       </body>
     </html>
   );
