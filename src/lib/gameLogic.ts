@@ -214,3 +214,49 @@ export const getCardWaitingNumbers = (card: LotoCard, drawnNumbers: Set<number>)
     });
     return Array.from(waitingNumbers);
 };
+
+/** Supported game modes */
+export type GameMode = 'row' | 'full' | 'two_rows' | 'corners';
+
+export const GAME_MODE_LABELS: Record<GameMode, string> = {
+    row: 'Hàng Ngang',
+    full: 'Full Card',
+    two_rows: '2 Hàng',
+    corners: '4 Góc',
+};
+
+/** Check if any 2 rows in the card are completed. */
+export const checkTwoRowsWin = (card: LotoCard, drawnNumbers: Set<number>): boolean => {
+    let completedRows = 0;
+    for (const row of card) {
+        if (checkRowWin(row, drawnNumbers)) completedRows++;
+    }
+    return completedRows >= 2;
+};
+
+/** Check if all 4 corners of the card are marked (row 0 first+last, row 2 first+last). */
+export const checkCornersWin = (card: LotoCard, drawnNumbers: Set<number>): boolean => {
+    if (card.length < 3) return false;
+    const getFirstNumber = (row: (number | null)[]) => row.find(n => n !== null);
+    const getLastNumber = (row: (number | null)[]) => [...row].reverse().find(n => n !== null);
+
+    const corners = [
+        getFirstNumber(card[0]),
+        getLastNumber(card[0]),
+        getFirstNumber(card[2]),
+        getLastNumber(card[2]),
+    ];
+
+    return corners.every(n => n !== null && n !== undefined && drawnNumbers.has(n));
+};
+
+/** Check win based on game mode. */
+export const checkWinByMode = (card: LotoCard, drawnNumbers: Set<number>, mode: GameMode): boolean => {
+    switch (mode) {
+        case 'row': return card.some(row => checkRowWin(row, drawnNumbers));
+        case 'full': return checkFullCardWin(card, drawnNumbers);
+        case 'two_rows': return checkTwoRowsWin(card, drawnNumbers);
+        case 'corners': return checkCornersWin(card, drawnNumbers);
+        default: return false;
+    }
+};
