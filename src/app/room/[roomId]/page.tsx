@@ -2,7 +2,8 @@
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useGameRoom, MAX_PLAYERS } from "@/lib/useGameRoom";
-import { checkRowWin, checkFullCardWin, getCardWaitingNumbers } from "@/lib/gameLogic";
+import { checkRowWin, checkFullCardWin, checkWinByMode, getCardWaitingNumbers } from "@/lib/gameLogic";
+import type { GameMode } from "@/lib/gameLogic";
 import LotoCard from "@/components/LotoCard";
 import NumberDrawing from "@/components/NumberDrawing";
 import ChatBox from "@/components/ChatBox";
@@ -15,8 +16,18 @@ import EmojiReactions from "@/components/EmojiReactions";
 import ShareRoom from "@/components/ShareRoom";
 import SoundControl from "@/components/SoundControl";
 import ThemeSelector from "@/components/ThemeSelector";
+import WalletBadge from "@/components/WalletBadge";
+import Leaderboard from "@/components/Leaderboard";
+import GameModeSelector from "@/components/GameModeSelector";
+import NotificationPrompt from "@/components/NotificationPrompt";
+import VoiceControls from "@/components/VoiceControls";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useVoiceChat } from "@/lib/useVoiceChat";
+import { sendNotification } from "@/components/NotificationPrompt";
+import { saveGameResult } from "@/lib/game-service";
+import { addXu, WIN_REWARD, PLAY_REWARD } from "@/lib/wallet-service";
 import { DEFAULT_THEME_ID } from "@/lib/ticket-themes";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
@@ -149,10 +160,35 @@ export default function GameRoom() {
         if (typeof window !== 'undefined') return localStorage.getItem('loto-theme') || DEFAULT_THEME_ID;
         return DEFAULT_THEME_ID;
     });
+    const [gameMode, setGameMode] = useState<GameMode>('row');
     const drawnNumbersSet = useMemo(() => new Set(drawnNumbers), [drawnNumbers]);
+
+    // Voice chat
+    const { isVoiceActive, isMicMuted, voicePeers, joinVoice, leaveVoice, toggleMic } = useVoiceChat(roomId, playerName);
 
     // Persist theme preference
     useEffect(() => { localStorage.setItem('loto-theme', themeId); }, [themeId]);
+
+    // Save game result + award xu when game ends
+    useEffect(() => {
+        if (gameStatus === 'ended' && winner) {
+            saveGameResult(roomId, winner.name, drawnNumbers.length, gameMode);
+            if (winner.name === playerName) {
+                addXu(WIN_REWARD);
+                toast.success(`+${WIN_REWARD} xu thưởng chiến thắng! 🎉`);
+            } else {
+                addXu(PLAY_REWARD);
+            }
+            sendNotification('🏆 Lô Tô Tết', `${winner.name} đã KINH!`);
+        }
+    }, [gameStatus, winner, roomId, drawnNumbers.length, gameMode, playerName]);
+
+    // Notify when game starts
+    useEffect(() => {
+        if (gameStatus === 'playing') {
+            sendNotification('🎮 Lô Tô Tết', 'Game đã bắt đầu! Vào chơi ngay!');
+        }
+    }, [gameStatus]);
 
     // Lock body scroll khi winner modal mở — fix double scrollbar
     useEffect(() => {
@@ -351,9 +387,19 @@ export default function GameRoom() {
                     </div>
 
                     {/* Right Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <WalletBadge />
+                        <VoiceControls
+                            isActive={isVoiceActive}
+                            isMuted={isMicMuted}
+                            peerCount={voicePeers.length}
+                            onJoin={joinVoice}
+                            onLeave={leaveVoice}
+                            onToggleMic={toggleMic}
+                        />
                         <SoundControl isMuted={isMuted} onToggleMute={() => setIsMuted(p => !p)} />
                         <ShareRoom roomId={roomId} />
+                        <LanguageSwitcher />
                     </div>
                 </div>
 
@@ -408,7 +454,17 @@ export default function GameRoom() {
                     <div className={`lg:col-span-3 flex flex-col gap-4 sm:gap-6 order-2 lg:order-1 ${activeTab === 'players' || activeTab === 'chat' ? "hidden lg:flex" : "flex"}`}>
                         {/* Host Controls Section */}
                         {isHost && (
-                            <div className="w-full">
+                            <div className="w-full space-y-3">
+                                {gameStatus === 'waiting' && (
+                                    <div className="glass-card p-3 border-white/5 space-y-2">
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Chế độ chơi</span>
+                                        <GameModeSelector
+                                            currentMode={gameMode}
+                                            onSelect={setGameMode}
+                                            disabled={gameStatus !== 'waiting'}
+                                        />
+                                    </div>
+                                )}
                                 <AdminControls
                                     onStart={startGame}
                                     onDraw={drawNumber}
@@ -424,6 +480,10 @@ export default function GameRoom() {
                             <NumberPoolGrid drawnNumbers={drawnNumbers} />
                             <div className="hidden lg:block h-full">
                                 <PlayerList players={players} currentPlayerName={playerName} sessionWins={sessionWins} />
+                            </div>
+                            {/* Leaderboard — desktop sidebar */}
+                            <div className="hidden lg:block">
+                                <Leaderboard roomId={roomId} />
                             </div>
                         </div>
                     </div>
@@ -541,8 +601,9 @@ export default function GameRoom() {
                     </div>
 
                     {/* Mobile Player List Tab */}
-                    <div className={`${activeTab === 'players' ? "block" : "hidden"} lg:hidden order-3`}>
+                    <div className={`${activeTab === 'players' ? "block" : "hidden"} lg:hidden order-3 space-y-4`}>
                         <PlayerList players={players} currentPlayerName={playerName} sessionWins={sessionWins} />
+                        <Leaderboard roomId={roomId} />
                     </div>
                 </div>
             </main>
@@ -673,6 +734,9 @@ export default function GameRoom() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Notification permission prompt */}
+            <NotificationPrompt />
         </div >
     );
 }

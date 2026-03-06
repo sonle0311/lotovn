@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/lib/room-service";
-import { Play, Users, Star } from "lucide-react";
+import { Play, Users, Star, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import LandingBackground from "@/components/LandingBackground";
 import ShopeeAffiliateCTA from "@/components/ShopeeAffiliateCTA";
 import { AdsterraBanner } from "@/components/AdsterraBanner";
+import WalletBadge from "@/components/WalletBadge";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -208,6 +210,17 @@ export default function LandingPage() {
                     <Play className="w-4 h-4 fill-current" />
                     <span>TẠO PHÒNG MỚI</span>
                   </button>
+
+                  <button onClick={() => router.push('/lobby')} aria-label="Xem phòng public" className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 font-bold text-sm hover:bg-white/10 hover:text-white/70 transition-all flex items-center justify-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    <span>PHÒNG CÔNG KHAI</span>
+                  </button>
+
+                  {/* Settings row */}
+                  <div className="flex items-center justify-between pt-1">
+                    <WalletBadge />
+                    <LanguageSwitcher />
+                  </div>
                 </div>
               </div>
             </div>
