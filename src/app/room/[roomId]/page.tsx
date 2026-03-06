@@ -500,14 +500,14 @@ export default function GameRoom() {
                             <div className="w-full flex-1 flex flex-col items-center gap-3 sm:gap-6 max-w-[680px]">
                                 {/* Auto-mark toggle */}
                                 <div className="flex items-center justify-between w-full px-1">
-                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Phiếu của bạn</span>
+                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{t('room.your_ticket')}</span>
                                     <button
                                         onClick={toggleAutoMark}
                                         className="flex items-center gap-2 min-h-[44px] min-w-[44px] justify-end px-1 -mr-1"
                                         aria-label={autoMarkEnabled ? "Tắt tự động đánh" : "Bật tự động đánh"}
                                         aria-pressed={autoMarkEnabled}
                                     >
-                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Tự động đánh</span>
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{t('ticket.auto_mark')}</span>
                                         <div className={`w-10 h-5 rounded-full transition-colors duration-200 relative border ${autoMarkEnabled ? "bg-yellow-500 border-yellow-400" : "bg-white/10 border-white/10"}`}>
                                             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all duration-200 ${autoMarkEnabled ? "left-[22px]" : "left-0.5"}`} />
                                         </div>
@@ -534,10 +534,10 @@ export default function GameRoom() {
                                             aria-label="Đổi vé mới"
                                         >
                                             <Shuffle size={18} className="animate-pulse" />
-                                            <span>Đổi Vé</span>
+                                            <span>{t('ticket.change')}</span>
                                         </button>
 
-                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-2">Theme vé</span>
+                                        <span className="text-[9px] font-black text-white/30 uppercase tracking-widest mt-2">{t('ticket.theme')}</span>
                                         <ThemeSelector currentThemeId={themeId} onSelect={setThemeId} />
 
                                         {/* Shopee affiliate + Adsterra — chỉ hiện khi chờ game bắt đầu */}
@@ -614,7 +614,7 @@ export default function GameRoom() {
 
             {/* Docked Kinh Button */}
             <AnimatePresence>
-                {gameStatus === 'playing' && (
+                {gameStatus === 'playing' && canKinh && (
                     <motion.div
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -622,22 +622,12 @@ export default function GameRoom() {
                         className="fixed bottom-8 sm:bottom-10 left-0 right-0 z-[100] px-4 flex justify-center pointer-events-none"
                     >
                         <motion.button
-                            whileHover={canKinh ? { scale: 1.05 } : {}}
-                            whileTap={canKinh ? { scale: 0.95 } : {}}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={handleKinh}
-                            className={`w-full max-w-sm py-5 rounded-2xl text-2xl font-black italic tracking-tighter transition-all duration-500 pointer-events-auto shadow-2xl
-                                ${canKinh
-                                    ? "bg-yellow-500 text-red-950 shadow-[0_0_40px_rgba(245,158,11,0.6),0_8px_0_#92400e] animate-pulse border-2 border-white/60"
-                                    : "bg-black/50 text-white/40 border-2 border-white/20 cursor-not-allowed backdrop-blur-sm"}`}
+                            className="w-full max-w-sm py-5 rounded-2xl text-2xl font-black italic tracking-tighter transition-all duration-500 pointer-events-auto shadow-2xl bg-yellow-500 text-red-950 shadow-[0_0_40px_rgba(245,158,11,0.6),0_8px_0_#92400e] animate-pulse border-2 border-white/60"
                         >
-                            {canKinh ? (
-                                "KINH!"
-                            ) : (
-                                <span className="flex items-center justify-center gap-2">
-                                    <Lock className="w-5 h-5 opacity-60" />
-                                    <span>KINH!</span>
-                                </span>
-                            )}
+                            {t('game.kinh')}
                         </motion.button>
                     </motion.div>
                 )}

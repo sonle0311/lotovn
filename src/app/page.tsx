@@ -27,33 +27,43 @@ export default function LandingPage() {
     setLocaleReady(true);
   }, []);
 
+  // Sanitize: strip SQL injection patterns and dangerous chars
+  const sanitizeName = (name: string) =>
+    name.replace(/['"`;\\<>{}]/g, '').replace(/-{2,}/g, '-').trim().slice(0, 20);
+
+  // Room code: alphanumeric only
+  const sanitizeRoomCode = (code: string) =>
+    code.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
+
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!playerName.trim()) {
+    const cleanName = sanitizeName(playerName);
+    if (!cleanName) {
       setError(t('landing.err_name'));
       return;
     }
-    if (!roomId.trim()) {
+    const cleanRoom = sanitizeRoomCode(roomId);
+    if (!cleanRoom) {
       setError(t('landing.err_room'));
       return;
     }
-    router.push(`/room/${roomId}?name=${encodeURIComponent(playerName.trim())}`);
+    router.push(`/room/${cleanRoom}?name=${encodeURIComponent(cleanName)}`);
   };
 
   const handleCreate = async () => {
-    if (!playerName.trim()) {
+    const cleanName = sanitizeName(playerName);
+    if (!cleanName) {
       setError(t('landing.err_name'));
       return;
     }
     const arr = new Uint8Array(5);
     crypto.getRandomValues(arr);
     const newRoomId = Array.from(arr, b => b.toString(36)).join('').substring(0, 8).toUpperCase();
-    const trimmedName = playerName.trim();
 
     setIsCreating(true);
     try {
-      await createRoom(newRoomId, trimmedName);
-      router.push(`/room/${newRoomId}?name=${encodeURIComponent(trimmedName)}`);
+      await createRoom(newRoomId, cleanName);
+      router.push(`/room/${newRoomId}?name=${encodeURIComponent(cleanName)}`);
     } catch {
       setError(t('landing.err_create'));
     } finally {

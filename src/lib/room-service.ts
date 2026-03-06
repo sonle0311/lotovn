@@ -16,9 +16,14 @@ export async function createRoom(
     roomId: string,
     hostName: string
 ): Promise<boolean> {
+    // Sanitize inputs before DB operations
+    const cleanRoomId = roomId.replace(/[^A-Z0-9]/gi, '').slice(0, 10);
+    const cleanName = hostName.replace(/['"`;\\<>{}]/g, '').replace(/-{2,}/g, '-').trim().slice(0, 20);
+    if (!cleanRoomId || !cleanName) return false;
+
     const { error: insertError } = await supabase
         .from('rooms')
-        .insert({ room_id: roomId, host_name: hostName });
+        .insert({ room_id: cleanRoomId, host_name: cleanName });
 
     // 23505 = Postgres unique_violation (room already exists) — acceptable race condition
     if (insertError && insertError.code !== '23505') {
@@ -27,8 +32,8 @@ export async function createRoom(
     }
 
     // Verify we are the host by reading back from DB
-    const host = await getRoomHost(roomId);
-    return host === hostName;
+    const host = await getRoomHost(cleanRoomId);
+    return host === cleanName;
 }
 
 /**
