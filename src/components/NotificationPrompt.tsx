@@ -1,19 +1,23 @@
 "use client";
 
 import { memo, useState, useEffect } from "react";
-import { Bell, BellOff } from "lucide-react";
+import { Bell } from "lucide-react";
 
 const NotificationPrompt = memo(function NotificationPrompt() {
     const [permission, setPermission] = useState<NotificationPermission>("default");
     const [dismissed, setDismissed] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         if (typeof Notification !== "undefined") {
             setPermission(Notification.permission);
         }
         setDismissed(localStorage.getItem("loto-notif-dismissed") === "true");
     }, []);
 
+    // SSR-safe: only render after mount to avoid hydration mismatch
+    if (!mounted) return null;
     if (permission === "granted" || permission === "denied" || dismissed) return null;
     if (typeof Notification === "undefined") return null;
 
