@@ -1,16 +1,19 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { AVAILABLE_LOCALES, getLocale, setLocale, type Locale } from "@/lib/i18n";
-import { Globe } from "lucide-react";
 
 const LanguageSwitcher = memo(function LanguageSwitcher() {
-    const [locale, setLocalState] = useState<Locale>(getLocale());
+    // SSR-safe: default 'vi', then sync from localStorage after mount
+    const [locale, setLocalState] = useState<Locale>('vi');
+
+    useEffect(() => {
+        setLocalState(getLocale());
+    }, []);
 
     const handleChange = (newLocale: Locale) => {
         setLocale(newLocale);
         setLocalState(newLocale);
-        // Force page refresh to apply translations
         window.location.reload();
     };
 
