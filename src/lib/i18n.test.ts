@@ -26,7 +26,8 @@ const ALL_KEYS = [
     // Landing page
     'landing.name_label', 'landing.name_placeholder', 'landing.room_label',
     'landing.room_placeholder', 'landing.join_btn', 'landing.or',
-    'landing.create_btn', 'landing.public_rooms', 'landing.hero_desc',
+    'landing.create_btn', 'landing.create_private', 'landing.create_public',
+    'landing.public_rooms', 'landing.hero_desc',
     'landing.hero_cta', 'landing.err_name', 'landing.err_room', 'landing.err_create',
     // Room page
     'room.title_prefix', 'room.drawing', 'room.ended_label', 'room.waiting_label',
@@ -210,7 +211,7 @@ describe('i18n', () => {
         });
 
         it('should have correct number of translation keys', () => {
-            expect(ALL_KEYS.length).toBe(63);
+            expect(ALL_KEYS.length).toBe(65);
         });
     });
 

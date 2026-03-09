@@ -50,7 +50,7 @@ export default function LandingPage() {
     router.push(`/room/${cleanRoom}?name=${encodeURIComponent(cleanName)}`);
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (isPublic: boolean = false) => {
     const cleanName = sanitizeName(playerName);
     if (!cleanName) {
       setError(t('landing.err_name'));
@@ -62,7 +62,7 @@ export default function LandingPage() {
 
     setIsCreating(true);
     try {
-      await createRoom(newRoomId, cleanName);
+      await createRoom(newRoomId, cleanName, isPublic);
       router.push(`/room/${newRoomId}?name=${encodeURIComponent(cleanName)}`);
     } catch {
       setError(t('landing.err_create'));
@@ -223,10 +223,14 @@ export default function LandingPage() {
                     <div className="grow border-t border-white/10"></div>
                   </div>
 
-                  <button onClick={handleCreate} disabled={isCreating} aria-label={t('room.create')} className="w-full py-3.5 bg-white/5 border border-white/10 rounded-xl text-yellow-500 font-bold text-base hover:bg-white/10 hover:border-yellow-500/50 transition-all flex items-center justify-center gap-2 group/btn2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>{t('landing.create_btn')}</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => handleCreate(false)} disabled={isCreating} aria-label={t('landing.create_private')} className="py-3 bg-white/5 border border-white/10 rounded-xl text-white/70 font-bold text-xs hover:bg-white/10 hover:border-white/30 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <span>{t('landing.create_private')}</span>
+                    </button>
+                    <button onClick={() => handleCreate(true)} disabled={isCreating} aria-label={t('landing.create_public')} className="py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-500 font-bold text-xs hover:bg-yellow-500/20 hover:border-yellow-500/50 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <span>{t('landing.create_public')}</span>
+                    </button>
+                  </div>
 
                   <button onClick={() => router.push('/lobby')} aria-label={t('lobby.title')} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 font-bold text-sm hover:bg-white/10 hover:text-white/70 transition-all flex items-center justify-center gap-2">
                     <Globe className="w-4 h-4" />
