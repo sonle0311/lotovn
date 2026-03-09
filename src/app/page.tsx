@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/lib/room-service";
+import { sanitizeName, sanitizeRoomCode } from "@/lib/sanitize";
 import { Play, Users, Star, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import LandingBackground from "@/components/LandingBackground";
@@ -28,14 +29,6 @@ export default function LandingPage() {
     const saved = localStorage.getItem('loto-player-name');
     if (saved) setPlayerName(saved);
   }, []);
-
-  // Sanitize: strip SQL injection patterns and dangerous chars
-  const sanitizeName = (name: string) =>
-    name.replace(/['"`;\\<>{}]/g, '').replace(/-{2,}/g, '-').trim().slice(0, 20);
-
-  // Room code: alphanumeric only
-  const sanitizeRoomCode = (code: string) =>
-    code.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 10);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();

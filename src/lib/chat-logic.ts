@@ -14,14 +14,9 @@ export interface ChatMessage {
 
 // ─── Pure Functions ─────────────────────────────────────────
 
-/** Sanitize text: strip HTML tags, remove control chars, enforce max length */
-export function sanitizeText(text: string, maxLen: number): string {
-    return text
-        .replace(/<[^>]*>/g, '')
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-        .trim()
-        .slice(0, maxLen);
-}
+import { sanitizeText } from './sanitize';
+// Re-export for backward compatibility
+export { sanitizeText };
 
 /** Tạo ChatMessage object với sanitized fields */
 export function createChatMessage(senderName: string, text: string): ChatMessage {
