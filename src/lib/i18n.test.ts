@@ -32,6 +32,12 @@ const ALL_KEYS = [
     'room.title_prefix', 'room.drawing', 'room.ended_label', 'room.waiting_label',
     'room.your_ticket', 'room.new_number', 'room.new_game', 'room.waiting_host',
     'room.game_mode',
+    // Admin controls
+    'admin.host_panel', 'admin.auto', 'admin.auto_draw', 'admin.manual_draw',
+    'admin.draw_speed', 'admin.sec_per_num', 'admin.room_settings',
+    'admin.public_toggle', 'admin.room_name_placeholder', 'admin.save',
+    // Lobby extras
+    'lobby.auto_refresh', 'lobby.rooms_count',
 ];
 
 describe('i18n', () => {
@@ -204,7 +210,7 @@ describe('i18n', () => {
         });
 
         it('should have correct number of translation keys', () => {
-            expect(ALL_KEYS.length).toBe(51);
+            expect(ALL_KEYS.length).toBe(63);
         });
     });
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getPublicRooms } from "@/lib/game-service";
 import { GAME_MODE_LABELS, type GameMode } from "@/lib/gameLogic";
-import { Users, Play, RefreshCw, Home } from "lucide-react";
+import { Users, Play, RefreshCw, Home, Circle } from "lucide-react";
 import { motion } from "framer-motion";
 import { t, getLocale } from "@/lib/i18n";
 
@@ -17,17 +17,20 @@ interface PublicRoom {
     created_at: string;
 }
 
+const MAX_ROOM_PLAYERS = 8;
+const REFRESH_INTERVAL = 10_000;
+
 export default function LobbyPage() {
     const router = useRouter();
     const [rooms, setRooms] = useState<PublicRoom[]>([]);
     const [loading, setLoading] = useState(true);
     const [playerName, setPlayerName] = useState("");
     const [error, setError] = useState(false);
+    const [, setLocaleReady] = useState(false);
 
-    useEffect(() => { getLocale(); }, []);
+    useEffect(() => { getLocale(); setLocaleReady(true); }, []);
 
-    const fetchRooms = async () => {
-        setLoading(true);
+    const fetchRooms = useCallback(async () => {
         setError(false);
         try {
             const data = await getPublicRooms();
@@ -37,15 +40,22 @@ export default function LobbyPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchRooms(); }, []);
+    // Initial + auto-refresh every 10s
+    useEffect(() => {
+        fetchRooms();
+        const interval = setInterval(fetchRooms, REFRESH_INTERVAL);
+        return () => clearInterval(interval);
+    }, [fetchRooms]);
 
     const joinRoom = (roomId: string) => {
         const cleanName = playerName.replace(/['"`;\\<>{}]/g, '').trim().slice(0, 20);
         if (!cleanName) return;
         router.push(`/room/${roomId}?name=${encodeURIComponent(cleanName)}`);
     };
+
+    const isFull = (room: PublicRoom) => room.player_count >= MAX_ROOM_PLAYERS;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-red-950 via-red-900 to-yellow-900 p-4">
@@ -58,17 +68,17 @@ export default function LobbyPage() {
                     </div>
                     <div className="flex gap-2">
                         <button
-                            onClick={fetchRooms}
+                            onClick={() => { setLoading(true); fetchRooms(); }}
                             className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all"
                             title="Refresh"
                         >
-                            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                            <RefreshCw size={16} className={loading ? "animate-spin text-yellow-500" : "text-white/60"} />
                         </button>
                         <button
                             onClick={() => router.push("/")}
                             className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all"
                         >
-                            <Home size={16} />
+                            <Home size={16} className="text-white/60" />
                         </button>
                     </div>
                 </div>
@@ -83,11 +93,21 @@ export default function LobbyPage() {
                         maxLength={20}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
                     />
+                    {!playerName.trim() && (
+                        <p className="text-[10px] text-yellow-500/60 mt-1.5 ml-1">{t('landing.err_name')}</p>
+                    )}
+                </div>
+
+                {/* Auto-refresh indicator */}
+                <div className="flex items-center gap-1.5 mb-3">
+                    <Circle size={6} className="text-green-500 fill-green-500 animate-pulse" />
+                    <span className="text-[10px] text-white/30">{t('lobby.auto_refresh')}</span>
+                    <span className="text-[10px] text-white/20 ml-auto">{rooms.length} {t('lobby.rooms_count')}</span>
                 </div>
 
                 {/* Room list */}
                 <div className="space-y-3">
-                    {loading && (
+                    {loading && rooms.length === 0 && (
                         <div className="glass-card p-8 border-white/5 text-center">
                             <p className="text-sm text-white/40 animate-pulse">{t('game.waiting')}...</p>
                         </div>
@@ -104,44 +124,56 @@ export default function LobbyPage() {
                         <div className="glass-card p-8 border-white/5 text-center">
                             <Users size={32} className="mx-auto mb-3 text-white/20" />
                             <p className="text-sm text-white/40">{t('lobby.empty')}</p>
+                            <button
+                                onClick={() => router.push("/")}
+                                className="mt-3 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-500 text-xs font-bold"
+                            >
+                                {t('landing.create_btn')}
+                            </button>
                         </div>
                     )}
 
-                    {rooms.map((room, i) => (
-                        <motion.div
-                            key={room.room_id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            className="glass-card border-white/5 p-4 flex items-center justify-between gap-4"
-                        >
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-white truncate">
-                                    {room.display_name || `${t('room.title_prefix')} ${room.room_id}`}
-                                </p>
-                                <div className="flex items-center gap-3 mt-1">
-                                    <span className="text-[10px] text-white/40">
-                                        {t('player.host')}: {room.host_name}
-                                    </span>
-                                    <span className="text-[10px] text-yellow-500/60">
-                                        {GAME_MODE_LABELS[(room.game_mode || 'row') as GameMode] || room.game_mode}
-                                    </span>
-                                    <span className="flex items-center gap-1 text-[10px] text-white/40">
-                                        <Users size={10} />
-                                        {room.player_count}
-                                    </span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => joinRoom(room.room_id)}
-                                disabled={!playerName.trim()}
-                                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:bg-white/10 disabled:text-white/20 text-red-950 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                    {rooms.map((room, i) => {
+                        const full = isFull(room);
+                        return (
+                            <motion.div
+                                key={room.room_id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className={`glass-card border-white/5 p-4 flex items-center justify-between gap-4 ${full ? "opacity-60" : ""}`}
                             >
-                                <Play size={14} />
-                                {t('lobby.join')}
-                            </button>
-                        </motion.div>
-                    ))}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-white truncate">
+                                        {room.display_name || `${t('room.title_prefix')} ${room.room_id}`}
+                                    </p>
+                                    <div className="flex items-center gap-3 mt-1">
+                                        <span className="text-[10px] text-white/40">
+                                            {t('player.host')}: {room.host_name}
+                                        </span>
+                                        <span className="text-[10px] text-yellow-500/60">
+                                            {GAME_MODE_LABELS[(room.game_mode || 'row') as GameMode] || room.game_mode}
+                                        </span>
+                                        <span className={`flex items-center gap-1 text-[10px] ${full ? "text-red-400" : "text-white/40"}`}>
+                                            <Users size={10} />
+                                            {room.player_count}/{MAX_ROOM_PLAYERS}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => joinRoom(room.room_id)}
+                                    disabled={!playerName.trim() || full}
+                                    className={`px-4 py-2 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 ${full
+                                        ? "bg-red-500/10 text-red-400 border border-red-500/20 cursor-not-allowed"
+                                        : "bg-yellow-500 hover:bg-yellow-400 disabled:bg-white/10 disabled:text-white/20 text-red-950"
+                                        }`}
+                                >
+                                    <Play size={14} />
+                                    {full ? t('room.full') : t('lobby.join')}
+                                </button>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

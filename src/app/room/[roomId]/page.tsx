@@ -474,6 +474,7 @@ export default function GameRoom() {
                                     onDraw={drawNumber}
                                     gameStatus={gameStatus}
                                     drawnNumbers={drawnNumbers}
+                                    roomId={roomId}
                                 />
                             </div>
                         )}

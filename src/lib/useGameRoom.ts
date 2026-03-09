@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { LotoTicket, generateTicket } from './gameLogic';
 import { getRoomHost } from './room-service';
+import { updateRoomPlayerCount } from './game-service';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 // ─── Extracted utils (pure logic) ───────────────────────────
@@ -101,6 +102,15 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         });
         return () => { cancelled = true; };
     }, [roomId, playerName]);
+
+    // Sync player count to DB (host-only, debounced)
+    useEffect(() => {
+        if (!isHost) return;
+        const timer = setTimeout(() => {
+            updateRoomPlayerCount(roomId, players.length);
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [players.length, isHost, roomId]);
 
     const drawnNumbersRef = useRef<number[]>([]);
     const currentNumberRef = useRef<number | null>(null);

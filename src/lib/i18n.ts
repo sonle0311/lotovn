@@ -57,6 +57,20 @@ const translations: Record<Locale, Record<string, string>> = {
         'room.new_game': 'CHƠI VÁN MỚI',
         'room.waiting_host': 'Đang chờ chủ phòng bắt đầu ván mới...',
         'room.game_mode': 'Chế độ chơi',
+        // Admin controls
+        'admin.host_panel': 'Bảng Điều Khiển Host',
+        'admin.auto': 'Tự động',
+        'admin.auto_draw': 'Tự động xổ',
+        'admin.manual_draw': 'Xổ thủ công',
+        'admin.draw_speed': 'Tốc độ xổ',
+        'admin.sec_per_num': 'giây / số',
+        'admin.room_settings': 'Cài đặt phòng',
+        'admin.public_toggle': 'Công khai lobby',
+        'admin.room_name_placeholder': 'Tên phòng hiển thị...',
+        'admin.save': 'Lưu',
+        // Lobby
+        'lobby.auto_refresh': 'Tự động làm mới',
+        'lobby.rooms_count': 'phòng',
     },
     en: {
         'app.title': 'Loto Tet',
@@ -112,6 +126,20 @@ const translations: Record<Locale, Record<string, string>> = {
         'room.new_game': 'PLAY NEW GAME',
         'room.waiting_host': 'Waiting for host to start a new game...',
         'room.game_mode': 'Game mode',
+        // Admin controls
+        'admin.host_panel': 'Host Panel',
+        'admin.auto': 'Auto',
+        'admin.auto_draw': 'Auto draw',
+        'admin.manual_draw': 'Manual draw',
+        'admin.draw_speed': 'Draw speed',
+        'admin.sec_per_num': 'sec / num',
+        'admin.room_settings': 'Room settings',
+        'admin.public_toggle': 'Public lobby',
+        'admin.room_name_placeholder': 'Room display name...',
+        'admin.save': 'Save',
+        // Lobby
+        'lobby.auto_refresh': 'Auto-refreshing',
+        'lobby.rooms_count': 'rooms',
     },
 };
 
