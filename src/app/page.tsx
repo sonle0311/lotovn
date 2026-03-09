@@ -23,8 +23,10 @@ export default function LandingPage() {
   const [, setLocaleReady] = useState(false);
 
   useEffect(() => {
-    getLocale(); // sync currentLocale from localStorage
+    getLocale();
     setLocaleReady(true);
+    const saved = localStorage.getItem('loto-player-name');
+    if (saved) setPlayerName(saved);
   }, []);
 
   // Sanitize: strip SQL injection patterns and dangerous chars
@@ -183,7 +185,7 @@ export default function LandingPage() {
                       type="text"
                       placeholder={t('landing.name_placeholder')}
                       value={playerName}
-                      onChange={(e) => { setPlayerName(e.target.value); setError(""); }}
+                      onChange={(e) => { setPlayerName(e.target.value); setError(""); localStorage.setItem('loto-player-name', e.target.value); }}
                       maxLength={20}
                       aria-label={t('player.name')}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 focus:bg-white/10 transition-all text-white placeholder:text-white/20 font-bold"

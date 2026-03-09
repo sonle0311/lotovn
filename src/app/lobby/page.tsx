@@ -28,7 +28,12 @@ export default function LobbyPage() {
     const [error, setError] = useState(false);
     const [, setLocaleReady] = useState(false);
 
-    useEffect(() => { getLocale(); setLocaleReady(true); }, []);
+    // Restore player name from localStorage (persists from landing page)
+    useEffect(() => {
+        getLocale(); setLocaleReady(true);
+        const saved = localStorage.getItem('loto-player-name');
+        if (saved) setPlayerName(saved);
+    }, []);
 
     const fetchRooms = useCallback(async () => {
         setError(false);
@@ -88,13 +93,13 @@ export default function LobbyPage() {
                     <input
                         type="text"
                         value={playerName}
-                        onChange={(e) => setPlayerName(e.target.value)}
+                        onChange={(e) => { setPlayerName(e.target.value); localStorage.setItem('loto-player-name', e.target.value); }}
                         placeholder={t('landing.name_placeholder')}
                         maxLength={20}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-yellow-500/50"
                     />
-                    {!playerName.trim() && (
-                        <p className="text-[10px] text-yellow-500/60 mt-1.5 ml-1">{t('landing.err_name')}</p>
+                    {!playerName.trim() && rooms.length > 0 && (
+                        <p className="text-[10px] text-yellow-500/60 mt-1.5 ml-1 animate-pulse">⬆️ {t('landing.err_name')}</p>
                     )}
                 </div>
 
