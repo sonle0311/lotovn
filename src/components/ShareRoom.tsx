@@ -1,8 +1,9 @@
 "use client";
 
 import { memo, useState, useRef, useEffect } from "react";
-import { Share2, Copy, Check, X, QrCode } from "lucide-react";
+import { Share2, Copy, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useHydrated } from "@/lib/useHydrated";
 
 interface ShareRoomProps {
     roomId: string;
@@ -12,12 +13,10 @@ const ShareRoom = memo(function ShareRoom({ roomId }: ShareRoomProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => { setMounted(true); }, []);
+    const hydrated = useHydrated();
 
     // SSR-safe URL
-    const roomUrl = mounted
+    const roomUrl = hydrated
         ? `${window.location.origin}/room/${roomId}`
         : `/room/${roomId}`;
 

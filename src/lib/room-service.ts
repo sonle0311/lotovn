@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { ensureUserId } from './auth-identity';
 
 /**
  * Insert a new room record into the `rooms` DB table.
@@ -12,6 +13,7 @@ export async function createRoom(
 ): Promise<boolean> {
     const cleanRoomId = roomId.replace(/[^A-Z0-9]/gi, '').slice(0, 10);
     const cleanName = hostName.replace(/['"`;<>{}]/g, '').replace(/-{2,}/g, '-').trim().slice(0, 20);
+    const hostUserId = await ensureUserId();
     if (!cleanRoomId || !cleanName) return false;
 
     const { error: insertError } = await supabase
@@ -19,6 +21,7 @@ export async function createRoom(
         .insert({
             room_id: cleanRoomId,
             host_name: cleanName,
+            host_user_id: hostUserId,
             is_public: isPublic,
         });
 
@@ -28,8 +31,8 @@ export async function createRoom(
         return false;
     }
 
-    const host = await getRoomHost(cleanRoomId);
-    return host === cleanName;
+    const host = await getRoomHostUserId(cleanRoomId);
+    return host === hostUserId;
 }
 
 /**
@@ -46,4 +49,20 @@ export async function getRoomHost(
 
     if (error || !data) return null;
     return data.host_name;
+}
+
+/**
+ * Fetch the host_user_id for a given room.
+ */
+export async function getRoomHostUserId(
+    roomId: string
+): Promise<string | null> {
+    const { data, error } = await supabase
+        .from('rooms')
+        .select('host_user_id')
+        .eq('room_id', roomId)
+        .single();
+
+    if (error || !data) return null;
+    return data.host_user_id;
 }

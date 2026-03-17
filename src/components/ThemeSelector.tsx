@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { TICKET_THEMES, getThemeById } from "@/lib/ticket-themes";
+import { TICKET_THEMES } from "@/lib/ticket-themes";
 import type { TicketTheme } from "@/lib/ticket-themes";
 
 interface ThemeSelectorProps {

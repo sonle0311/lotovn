@@ -35,31 +35,35 @@ export default function AdminControls({ onStart, onDraw, gameStatus, drawnNumber
     const [savingPublic, setSavingPublic] = useState(false);
 
     useEffect(() => {
-        if (autoDraw && gameStatus === 'playing') {
-            if (countdown <= 0) {
-                const next = pickRandomAvailable(drawnNumbers);
-                if (next !== null) {
-                    onDraw(next);
-                    setCountdown(drawInterval);
-                } else {
-                    setAutoDraw(false);
-                }
-            } else {
-                const timer = setTimeout(() => {
-                    setCountdown(prev => prev - 1);
-                }, 1000);
-                return () => clearTimeout(timer);
+        if (!autoDraw || gameStatus !== 'playing' || countdown <= 0) return;
+        const timer = setTimeout(() => {
+            setCountdown(prev => prev - 1);
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, [autoDraw, countdown, gameStatus]);
+
+    useEffect(() => {
+        if (!autoDraw || gameStatus !== 'playing' || countdown !== 0) return;
+        const timer = setTimeout(() => {
+            const next = pickRandomAvailable(drawnNumbers);
+            if (next !== null) {
+                onDraw(next);
+                setCountdown(drawInterval);
+                return;
             }
-        } else if (countdown !== 0) {
-            setCountdown(0);
-        }
-    }, [autoDraw, countdown, gameStatus, drawInterval, onDraw, drawnNumbers]);
+            setAutoDraw(false);
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [autoDraw, countdown, drawInterval, drawnNumbers, gameStatus, onDraw]);
 
     const handleToggleAuto = () => {
-        if (!autoDraw) {
-            setCountdown(drawInterval);
+        if (autoDraw) {
+            setCountdown(0);
+            setAutoDraw(false);
+            return;
         }
-        setAutoDraw(!autoDraw);
+        setCountdown(drawInterval);
+        setAutoDraw(true);
     };
 
     const handleTogglePublic = useCallback(async () => {

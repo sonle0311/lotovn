@@ -1,5 +1,3 @@
-import { supabase } from './supabaseClient';
-
 /**
  * Wallet service for virtual currency (Xu) system.
  * Uses localStorage as primary store since we don't have user auth.

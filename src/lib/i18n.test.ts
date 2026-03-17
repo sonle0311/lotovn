@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { t, setLocale, getLocale, AVAILABLE_LOCALES, type Locale } from './i18n';
+import { t, setLocale, getLocale, AVAILABLE_LOCALES } from './i18n';
 
 // Mock localStorage
 const store: Record<string, string> = {};

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createRoom } from "@/lib/room-service";
 import { sanitizeName, sanitizeRoomCode } from "@/lib/sanitize";
-import { Play, Users, Star, Globe } from "lucide-react";
+import { Users, Star, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import LandingBackground from "@/components/LandingBackground";
 import ShopeeAffiliateCTA from "@/components/ShopeeAffiliateCTA";
@@ -20,12 +20,9 @@ export default function LandingPage() {
   const [error, setError] = useState("");
   const [isHovering, setIsHovering] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  // SSR-safe: force re-render after locale read from localStorage
-  const [, setLocaleReady] = useState(false);
 
   useEffect(() => {
     getLocale();
-    setLocaleReady(true);
     const saved = localStorage.getItem('loto-player-name');
     if (saved) setPlayerName(saved);
   }, []);
@@ -42,7 +39,8 @@ export default function LandingPage() {
       setError(t('landing.err_room'));
       return;
     }
-    router.push(`/room/${cleanRoom}?name=${encodeURIComponent(cleanName)}`);
+    localStorage.setItem('loto-player-name', cleanName);
+    router.push(`/room/${cleanRoom}`);
   };
 
   const handleCreate = async (isPublic: boolean = false) => {
@@ -58,7 +56,8 @@ export default function LandingPage() {
     setIsCreating(true);
     try {
       await createRoom(newRoomId, cleanName, isPublic);
-      router.push(`/room/${newRoomId}?name=${encodeURIComponent(cleanName)}`);
+      localStorage.setItem('loto-player-name', cleanName);
+      router.push(`/room/${newRoomId}`);
     } catch {
       setError(t('landing.err_create'));
     } finally {

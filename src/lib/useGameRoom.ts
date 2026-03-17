@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { LotoTicket, generateTicket } from './gameLogic';
-import { getRoomHost } from './room-service';
+import { getRoomHostUserId } from './room-service';
 import { updateRoomPlayerCount } from './game-service';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { useHydrated } from './useHydrated';
 
 // ─── Extracted utils (pure logic) ───────────────────────────
 import { presenceToPlayers } from './presence-logic';
 import type { Player } from './presence-logic';
 import {
-    sanitizeText,
     createChatMessage,
     getChatThrottleRemaining,
-    CHAT_THROTTLE_MS,
     MAX_CHAT_MESSAGES,
-    MAX_PLAYER_NAME_LEN,
 } from './chat-logic';
 import type { ChatMessage } from './chat-logic';
 import { validateWinRequest, MAX_PLAYERS } from './game-state-logic';
@@ -26,13 +24,43 @@ import type { WinnerData } from './game-state-logic';
 export type { Player, ChatMessage, WinnerData };
 export { MAX_PLAYERS };
 
-export const useGameRoom = (roomId: string, playerName: string) => {
+function readStoredTicket(roomId: string): LotoTicket | null {
+    if (typeof window === "undefined") return null;
+
+    const cached = localStorage.getItem(`loto-ticket-${roomId}`);
+    if (!cached) return generateTicket();
+
+    try {
+        return JSON.parse(cached) as LotoTicket;
+    } catch {
+        return generateTicket();
+    }
+}
+
+function readStoredBoolean(key: string): boolean {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(key) === "true";
+}
+
+function readStoredWins(key: string): number {
+    if (typeof window === "undefined") return 0;
+
+    try {
+        const stored = localStorage.getItem(key);
+        return stored ? (JSON.parse(stored).wins || 0) : 0;
+    } catch {
+        return 0;
+    }
+}
+
+export const useGameRoom = (roomId: string, playerName: string, playerId: string) => {
+    const hydrated = useHydrated();
     const [players, setPlayers] = useState<Player[]>([]);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [drawnNumbers, setDrawnNumbers] = useState<number[]>([]);
     const [currentNumber, setCurrentNumber] = useState<number | null>(null);
     const [gameStatus, setGameStatus] = useState<'waiting' | 'playing' | 'ended'>('waiting');
-    const [myTicket, setMyTicket] = useState<LotoTicket | null>(null);
+    const [ticketState, setTicketState] = useState<{ roomId: string; ticket: LotoTicket } | null>(null);
     const [isRoomFull, setIsRoomFull] = useState(false);
     const [chatCooldown, setChatCooldown] = useState(0);
 
@@ -43,14 +71,14 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const [winner, setWinner] = useState<WinnerData | null>(null);
     const [winRejected, setWinRejected] = useState(false);
     const [waitingKinhPlayer, setWaitingKinhPlayer] = useState<Player | null>(null);
-    const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set());
+    const [manualMarkedNumbers, setManualMarkedNumbers] = useState<Set<number>>(new Set());
 
     // Auto-mark: automatically mark drawn numbers on ticket
-    const [autoMarkEnabled, setAutoMarkEnabled] = useState<boolean>(false);
+    const [autoMarkOverride, setAutoMarkOverride] = useState<boolean | null>(null);
     // Keep ticket preference: skip auto-regeneration between rounds
-    const [keepTicketPref, setKeepTicketPref] = useState<boolean>(false);
+    const [keepTicketOverride, setKeepTicketOverride] = useState<boolean | null>(null);
     // Session win counter persisted to localStorage
-    const [sessionWins, setSessionWins] = useState<number>(0);
+    const [sessionWinsState, setSessionWinsState] = useState<{ key: string; wins: number } | null>(null);
     // Emoji reactions floating display
     const [incomingReactions, setIncomingReactions] = useState<{ id: string; emoji: string; senderName: string }[]>([]);
 
@@ -58,50 +86,49 @@ export const useGameRoom = (roomId: string, playerName: string) => {
     const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const gameStatusRef = useRef<'waiting' | 'playing' | 'ended'>('waiting');
     const waitingKinhTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const sessionWinsKey = `loto-session-${roomId}-${playerId}`;
+    const storedTicket = useMemo(
+        () => (hydrated ? readStoredTicket(roomId) : null),
+        [hydrated, roomId]
+    );
+    const myTicket = ticketState?.roomId === roomId ? ticketState.ticket : storedTicket;
+    const autoMarkEnabled = autoMarkOverride ?? (hydrated ? readStoredBoolean("loto-auto-mark") : false);
+    const keepTicketPref = keepTicketOverride ?? (hydrated ? readStoredBoolean("loto-keep-ticket") : false);
+    const sessionWins =
+        sessionWinsState?.key === sessionWinsKey
+            ? sessionWinsState.wins
+            : hydrated
+                ? readStoredWins(sessionWinsKey)
+                : 0;
+    const markedNumbers = useMemo(() => {
+        if (!autoMarkEnabled || !myTicket || gameStatus !== "playing") return manualMarkedNumbers;
 
-    // Hydrate myTicket from localStorage (client-only, SSR-safe)
-    useEffect(() => {
-        const cached = localStorage.getItem(`loto-ticket-${roomId}`);
-        if (cached) {
-            try {
-                setMyTicket(JSON.parse(cached));
-                return;
-            } catch {
-                // fall through to generate
-            }
-        }
-        setMyTicket(generateTicket());
-    }, [roomId]);
-
-    // Hydrate autoMarkEnabled from localStorage (client-only, SSR-safe)
-    useEffect(() => {
-        setAutoMarkEnabled(localStorage.getItem("loto-auto-mark") === "true");
-    }, []);
-
-    // Hydrate keepTicketPref from localStorage (client-only, SSR-safe)
-    useEffect(() => {
-        setKeepTicketPref(localStorage.getItem("loto-keep-ticket") === "true");
-    }, []);
-
-    // Hydrate sessionWins from localStorage (client-only, SSR-safe)
-    useEffect(() => {
-        try {
-            const s = localStorage.getItem(`loto-session-${roomId}-${playerName}`);
-            setSessionWins(s ? (JSON.parse(s).wins || 0) : 0);
-        } catch { /* keep 0 */ }
-    }, [roomId, playerName]);
+        const next = new Set(manualMarkedNumbers);
+        const drawnSet = new Set(drawnNumbers);
+        myTicket.frames.forEach((frame) => {
+            frame.forEach((row) => {
+                row.forEach((num) => {
+                    if (num !== null && drawnSet.has(num)) {
+                        next.add(num);
+                    }
+                });
+            });
+        });
+        return next;
+    }, [autoMarkEnabled, drawnNumbers, gameStatus, manualMarkedNumbers, myTicket]);
 
     // Resolve host authority from DB on mount — replaces URL ?host=true spoof
     useEffect(() => {
+        if (!playerId) return;
         let cancelled = false;
-        getRoomHost(roomId).then((hostName) => {
+        getRoomHostUserId(roomId).then((hostUserId) => {
             if (cancelled) return;
-            const amHost = hostName === playerName;
+            const amHost = hostUserId === playerId;
             setIsHost(amHost);
             isHostRef.current = amHost;
         });
         return () => { cancelled = true; };
-    }, [roomId, playerName]);
+    }, [roomId, playerId]);
 
     // Sync player count to DB (host-only, debounced)
     useEffect(() => {
@@ -122,56 +149,36 @@ export const useGameRoom = (roomId: string, playerName: string) => {
 
     // Save ticket to cache
     useEffect(() => {
-        if (myTicket && typeof window !== 'undefined') {
+        if (myTicket && hydrated) {
             localStorage.setItem(`loto-ticket-${roomId}`, JSON.stringify(myTicket));
         }
-    }, [myTicket, roomId]);
+    }, [hydrated, myTicket, roomId]);
 
     // Persist auto-mark preference
     useEffect(() => {
-        if (typeof window !== "undefined") {
+        if (hydrated) {
             localStorage.setItem("loto-auto-mark", String(autoMarkEnabled));
         }
-    }, [autoMarkEnabled]);
+    }, [autoMarkEnabled, hydrated]);
 
     // Persist keep-ticket preference
     useEffect(() => {
-        if (typeof window !== "undefined") {
+        if (hydrated) {
             localStorage.setItem("loto-keep-ticket", String(keepTicketPref));
         }
-    }, [keepTicketPref]);
+    }, [hydrated, keepTicketPref]);
 
     // ─── Helper: Increment session wins (deduplicates host + non-host paths) ──
     const incrementSessionWins = useCallback(() => {
-        setSessionWins(prev => {
-            const next = prev + 1;
-            if (typeof window !== "undefined") {
-                localStorage.setItem(`loto-session-${roomId}-${playerName}`, JSON.stringify({ wins: next }));
+        setSessionWinsState((prev) => {
+            const base = prev?.key === sessionWinsKey ? prev.wins : readStoredWins(sessionWinsKey);
+            const next = base + 1;
+            if (hydrated) {
+                localStorage.setItem(sessionWinsKey, JSON.stringify({ wins: next }));
             }
-            return next;
+            return { key: sessionWinsKey, wins: next };
         });
-    }, [roomId, playerName]);
-
-    // Auto-mark: add drawn numbers matching current ticket to markedNumbers Set
-    useEffect(() => {
-        if (!autoMarkEnabled || !myTicket || gameStatusRef.current !== "playing") return;
-        const drawnSet = new Set(drawnNumbers);
-        setMarkedNumbers(prev => {
-            const next = new Set(prev);
-            let changed = false;
-            myTicket.frames.forEach(frame =>
-                frame.forEach(row =>
-                    row.forEach(num => {
-                        if (num !== null && drawnSet.has(num) && !prev.has(num)) {
-                            next.add(num);
-                            changed = true;
-                        }
-                    })
-                )
-            );
-            return changed ? next : prev;
-        });
-    }, [drawnNumbers, autoMarkEnabled, myTicket]);
+    }, [hydrated, sessionWinsKey]);
 
     // ─── Helper: Thêm message với giới hạn MAX ──────────────
     const appendMessage = useCallback((msg: ChatMessage) => {
@@ -188,11 +195,12 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         if (!channelRef.current) return;
         await channelRef.current.track({
             name: playerName,
+            userId: playerId,
             isHost: isHostRef.current,
             status: gameStatusRef.current === 'playing' ? 'playing' : 'waiting',
             ...overrides,
         });
-    }, [playerName]);
+    }, [playerId, playerName]);
 
     // ─── Helper: Reset game state ────────────────────────────
     const applyGameReset = useCallback((clearMessages = false) => {
@@ -200,18 +208,18 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         setCurrentNumber(null);
         setWinner(null);
         setWinRejected(false);
-        setMarkedNumbers(new Set());
+        setManualMarkedNumbers(new Set());
         setWaitingKinhPlayer(null);
         if (clearMessages) setMessages([]);
     }, []);
 
     // ─── Handle Channel Lifecycle ────────────────────────────
     useEffect(() => {
-        if (!roomId || !playerName) return;
+        if (!roomId || !playerName || !playerId) return;
 
         const channel = supabase.channel(`room:${roomId}`, {
             config: {
-                presence: { key: playerName },
+                presence: { key: playerId },
             },
         });
         channelRef.current = channel;
@@ -230,7 +238,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 // Anti-cheat: Nếu đã có host khác → tước quyền
                 for (const presence of newPresences) {
                     const p = presence as Record<string, unknown>;
-                    if (p.isHost && p.name !== playerName && isHostRef.current) {
+                    if (p.isHost && p.userId !== playerId && isHostRef.current) {
                         setIsHost(false);
                         isHostRef.current = false;
                     }
@@ -239,8 +247,8 @@ export const useGameRoom = (roomId: string, playerName: string) => {
 
             // ─── Host Migration ──────────────────────────────
             .on('broadcast', { event: 'host_change' }, ({ payload }) => {
-                const newHostName = payload.newHost as string;
-                if (newHostName === playerName) {
+                const newHostUserId = payload.newHostUserId as string;
+                if (newHostUserId === playerId) {
                     setIsHost(true);
                     isHostRef.current = true;
                 } else {
@@ -250,7 +258,8 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 // Re-track với isHost mới
                 channel.track({
                     name: playerName,
-                    isHost: newHostName === playerName,
+                    userId: playerId,
+                    isHost: newHostUserId === playerId,
                     status: gameStatusRef.current === 'playing' ? 'playing' : 'waiting',
                 });
             })
@@ -263,6 +272,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 // Re-track status 'playing'
                 channel.track({
                     name: playerName,
+                    userId: playerId,
                     isHost: isHostRef.current,
                     status: 'playing',
                 });
@@ -274,6 +284,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 // Re-track status 'waiting'
                 channel.track({
                     name: playerName,
+                    userId: playerId,
                     isHost: isHostRef.current,
                     status: 'waiting',
                 });
@@ -363,6 +374,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 // Track presence — Supabase tự broadcast cho mọi người
                 await channel.track({
                     name: playerName,
+                    userId: playerId,
                     isHost: isHostRef.current,
                     status: 'waiting',
                 });
@@ -384,10 +396,11 @@ export const useGameRoom = (roomId: string, playerName: string) => {
             channelRef.current = null;
             if (waitingKinhTimerRef.current) clearTimeout(waitingKinhTimerRef.current);
         };
-    }, [roomId, playerName, appendMessage, applyGameReset, incrementSessionWins]);
+    }, [roomId, playerName, playerId, appendMessage, applyGameReset, incrementSessionWins]);
 
     // ─── Non-host: detect host offline & migrate ────────────
     useEffect(() => {
+        if (!playerId) return;
         if (isHost) return;
 
         const checkHostAlive = setInterval(() => {
@@ -400,21 +413,22 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 // Host biến mất → player đầu tiên nhận host
                 const sorted = playerList
                     .filter(p => !p.isHost)
-                    .sort((a, b) => a.name.localeCompare(b.name));
+                    .sort((a, b) => a.id.localeCompare(b.id));
 
-                if (sorted.length > 0 && sorted[0].name === playerName) {
+                if (sorted.length > 0 && sorted[0].id === playerId) {
                     setIsHost(true);
                     isHostRef.current = true;
 
                     channelRef.current?.send({
                         type: 'broadcast',
                         event: 'host_change',
-                        payload: { newHost: playerName },
+                        payload: { newHostUserId: playerId },
                     });
 
                     // Re-track với isHost = true
                     channelRef.current?.track({
                         name: playerName,
+                        userId: playerId,
                         isHost: true,
                         status: gameStatusRef.current === 'playing' ? 'playing' : 'waiting',
                     });
@@ -423,7 +437,7 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         }, 10000);
 
         return () => clearInterval(checkHostAlive);
-    }, [isHost, playerName]);
+    }, [isHost, playerId, playerName]);
 
     // ─── Chat Cooldown Timer ────────────────────────────────
     const lastMessageTimeRef = useRef(0);
@@ -530,16 +544,17 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 setWinner(result.winner);
                 setGameStatus('ended');
                 gameStatusRef.current = 'ended';
+                if (result.winner.name === playerName) incrementSessionWins();
             } else {
                 setWinRejected(true);
                 setTimeout(() => setWinRejected(false), 3000);
             }
         }
-    }, [playerName, myTicket, markedNumbers]);
+    }, [playerName, myTicket, markedNumbers, incrementSessionWins]);
 
     const declareWaitingKinh = useCallback((isWaiting: boolean, waitingNumbers?: number[]) => {
         const player: Player = {
-            id: playerName,
+            id: playerId,
             name: playerName,
             isHost,
             status: 'playing',
@@ -553,11 +568,11 @@ export const useGameRoom = (roomId: string, playerName: string) => {
                 payload: { player },
             });
         }
-    }, [playerName, isHost]);
+    }, [playerId, playerName, isHost]);
 
     const toggleMark = useCallback((num: number, isDrawn: boolean) => {
         if (!isDrawn) return;
-        setMarkedNumbers(prevMarked => {
+        setManualMarkedNumbers(prevMarked => {
             const next = new Set(prevMarked);
             if (next.has(num)) {
                 next.delete(num);
@@ -588,19 +603,33 @@ export const useGameRoom = (roomId: string, playerName: string) => {
         if (gameStatusRef.current !== 'waiting') return;
         if (keepTicketPref) return; // user wants to keep ticket
         const newTicket = generateTicket();
-        setMyTicket(newTicket);
-    }, [keepTicketPref]);
+        setTicketState({ roomId, ticket: newTicket });
+    }, [keepTicketPref, roomId]);
 
     // Force regenerate always generates new ticket and clears keep preference
     const forceRegenerateTicket = useCallback(() => {
         if (gameStatusRef.current !== 'waiting') return;
-        setMyTicket(generateTicket());
-        setKeepTicketPref(false);
-    }, []);
+        setTicketState({ roomId, ticket: generateTicket() });
+        setKeepTicketOverride(false);
+    }, [roomId]);
 
-    const toggleAutoMark = useCallback(() => setAutoMarkEnabled(p => !p), []);
+    const toggleAutoMark = useCallback(() => {
+        if (autoMarkEnabled) {
+            // Preserve visible marks when switching auto-mark off mid-game.
+            setManualMarkedNumbers((prevMarked) => {
+                const next = new Set(prevMarked);
+                markedNumbers.forEach((num) => next.add(num));
+                return next;
+            });
+        }
+
+        setAutoMarkOverride(!autoMarkEnabled);
+    }, [autoMarkEnabled, markedNumbers]);
     const toggleKeepTicket = useCallback((val?: boolean) =>
-        setKeepTicketPref(p => val !== undefined ? val : !p), []);
+        setKeepTicketOverride((prev) => {
+            const current = prev ?? readStoredBoolean("loto-keep-ticket");
+            return val !== undefined ? val : !current;
+        }), []);
 
     const sendReaction = useCallback((emoji: string) => {
         const reaction = {

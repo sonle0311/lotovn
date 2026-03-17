@@ -3,7 +3,6 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
 import { LotoTicket } from "@/lib/gameLogic";
-import type { TicketTheme } from "@/lib/ticket-themes";
 import { getThemeById, DEFAULT_THEME_ID } from "@/lib/ticket-themes";
 
 interface LotoCardProps {

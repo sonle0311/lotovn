@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useCallback, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { memo, useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 const EMOJI_LIST = ["👏", "🔥", "😭", "🎉", "😱", "💀"] as const;
 
@@ -10,16 +10,28 @@ interface EmojiReactionsProps {
     incomingReactions: { id: string; emoji: string; senderName: string }[];
 }
 
+function getReactionX(id: string, width: number): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    }
+
+    const usableWidth = Math.max(width - 60, 1);
+    return (hash % usableWidth) + 30;
+}
+
 const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions }: EmojiReactionsProps) {
     const [lastReactTime, setLastReactTime] = useState(0);
-    const [dimensions, setDimensions] = useState({ w: 400, h: 800 });
+    const [dimensions, setDimensions] = useState(() =>
+        typeof window === "undefined"
+            ? { w: 400, h: 800 }
+            : { w: window.innerWidth, h: window.innerHeight }
+    );
 
-    // SSR-safe: read window dimensions only after mount
     useEffect(() => {
-        setDimensions({ w: window.innerWidth, h: window.innerHeight });
         const handleResize = () => setDimensions({ w: window.innerWidth, h: window.innerHeight });
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
     }, []);
 
     const handleReact = useCallback((emoji: string) => {
@@ -31,13 +43,12 @@ const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions
 
     return (
         <>
-            {/* Emoji picker bar */}
             <div className="flex gap-1.5">
                 {EMOJI_LIST.map((emoji) => (
                     <button
                         key={emoji}
                         onClick={() => handleReact(emoji)}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base sm:text-lg hover:bg-white/15 hover:scale-110 active:scale-90 transition-all"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-base transition-all hover:scale-110 hover:bg-white/15 active:scale-90 sm:h-9 sm:w-9 sm:text-lg"
                         title={`React ${emoji}`}
                     >
                         {emoji}
@@ -45,8 +56,7 @@ const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions
                 ))}
             </div>
 
-            {/* Floating emoji animations */}
-            <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+            <div className="fixed inset-0 z-50 overflow-hidden pointer-events-none">
                 <AnimatePresence>
                     {incomingReactions.map((reaction) => (
                         <motion.div
@@ -54,7 +64,7 @@ const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions
                             initial={{
                                 opacity: 1,
                                 y: dimensions.h - 100,
-                                x: Math.random() * (dimensions.w - 60) + 30,
+                                x: getReactionX(reaction.id, dimensions.w),
                                 scale: 0.5,
                             }}
                             animate={{
@@ -67,7 +77,7 @@ const EmojiReactions = memo(function EmojiReactions({ onReact, incomingReactions
                             className="absolute text-4xl"
                         >
                             {reaction.emoji}
-                            <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white/60 whitespace-nowrap bg-black/40 px-1.5 py-0.5 rounded-full">
+                            <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/40 px-1.5 py-0.5 text-[8px] font-bold text-white/60">
                                 {reaction.senderName}
                             </span>
                         </motion.div>

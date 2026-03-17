@@ -1,24 +1,21 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo, useState } from "react";
 import { Bell } from "lucide-react";
+import { useHydrated } from "@/lib/useHydrated";
 
 const NotificationPrompt = memo(function NotificationPrompt() {
-    const [permission, setPermission] = useState<NotificationPermission>("default");
-    const [dismissed, setDismissed] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        if (typeof Notification !== "undefined") {
-            setPermission(Notification.permission);
-        }
-        setDismissed(localStorage.getItem("loto-notif-dismissed") === "true");
-    }, []);
+    const hydrated = useHydrated();
+    const [permission, setPermission] = useState<NotificationPermission | null>(null);
+    const [dismissed, setDismissed] = useState<boolean | null>(null);
+    const resolvedPermission =
+        permission ?? (hydrated && typeof Notification !== "undefined" ? Notification.permission : "default");
+    const isDismissed =
+        dismissed ?? (hydrated ? localStorage.getItem("loto-notif-dismissed") === "true" : false);
 
     // SSR-safe: only render after mount to avoid hydration mismatch
-    if (!mounted) return null;
-    if (permission === "granted" || permission === "denied" || dismissed) return null;
+    if (!hydrated) return null;
+    if (resolvedPermission === "granted" || resolvedPermission === "denied" || isDismissed) return null;
     if (typeof Notification === "undefined") return null;
 
     const handleAllow = async () => {

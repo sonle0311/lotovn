@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { getBalance, addXu, spendXu, checkDailyBonus, WIN_REWARD, PLAY_REWARD } from './wallet-service';
 
 // Mock localStorage

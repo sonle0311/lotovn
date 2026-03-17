@@ -47,7 +47,8 @@ export default function LobbyPage() {
     const joinRoom = (roomId: string) => {
         const cleanName = sanitizeName(playerName);
         if (!cleanName) return;
-        router.push(`/room/${roomId}?name=${encodeURIComponent(cleanName)}`);
+        localStorage.setItem('loto-player-name', cleanName);
+        router.push(`/room/${roomId}`);
     };
 
     return (

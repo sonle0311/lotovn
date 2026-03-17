@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useGameRoom, MAX_PLAYERS } from "@/lib/useGameRoom";
-import { checkRowWin, checkFullCardWin, checkWinByMode, getCardWaitingNumbers } from "@/lib/gameLogic";
+import { checkRowWin, checkFullCardWin, getCardWaitingNumbers } from "@/lib/gameLogic";
 import type { GameMode } from "@/lib/gameLogic";
 import LotoCard from "@/components/LotoCard";
 import NumberDrawing from "@/components/NumberDrawing";
@@ -28,10 +28,12 @@ import { saveGameResult } from "@/lib/game-service";
 import { addXu, WIN_REWARD, PLAY_REWARD } from "@/lib/wallet-service";
 import { DEFAULT_THEME_ID } from "@/lib/ticket-themes";
 import { t, getLocale } from "@/lib/i18n";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { sanitizeName } from "@/lib/sanitize";
+import { ensureUserId } from "@/lib/auth-identity";
+import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert, Lock } from "lucide-react";
+import { Home, Trophy, BellRing, RotateCcw, Shuffle, Check, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { FUNNY_PHRASES, OPPONENT_PHRASES } from "@/lib/game-phrases";
 
@@ -102,8 +104,42 @@ export default function GameRoom() {
     const params = useParams();
     const router = useRouter();
     const roomId = params.roomId as string;
-    const rawName = searchParams.get("name") || "";
-    const playerName = rawName.replace(/<[^>]*>/g, '').replace(/[\x00-\x1F]/g, '').trim().slice(0, 20);
+    const queryNameParam = searchParams.get("name") || "";
+    const [playerName, setPlayerName] = useState("");
+    const [playerId, setPlayerId] = useState("");
+    const [identityReady, setIdentityReady] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function initIdentity() {
+            const storedName = sanitizeName(localStorage.getItem("loto-player-name") || "");
+            const queryName = sanitizeName(queryNameParam);
+            const resolvedName = storedName || queryName;
+
+            if (!resolvedName) {
+                router.push("/");
+                return;
+            }
+
+            localStorage.setItem("loto-player-name", resolvedName);
+            if (!cancelled) setPlayerName(resolvedName);
+
+            try {
+                const uid = await ensureUserId();
+                if (!cancelled) {
+                    setPlayerId(uid);
+                    setIdentityReady(true);
+                }
+            } catch {
+                toast.error("Khong the xac thuc nguoi choi. Vui long thu lai.");
+                router.push("/");
+            }
+        }
+
+        void initIdentity();
+        return () => { cancelled = true; };
+    }, [queryNameParam, router]);
 
     const {
         players,
@@ -135,10 +171,10 @@ export default function GameRoom() {
         sessionWins,
         incomingReactions,
         sendReaction,
-    } = useGameRoom(roomId, playerName);
+    } = useGameRoom(roomId, playerName, playerId);
 
-    const [hasDeclaredWin, setHasDeclaredWin] = useState(false);
-    const [lastWaitingSignature, setLastWaitingSignature] = useState<string>("");
+    const hasDeclaredWinRef = useRef(false);
+    const lastWaitingSignatureRef = useRef("");
     const [activeTab, setActiveTab] = useState<'game' | 'players' | 'chat'>('game');
     const [isMuted, setIsMuted] = useState(false);
     const [themeId, setThemeId] = useState<string>(() => {
@@ -183,14 +219,7 @@ export default function GameRoom() {
         const isModalOpen = gameStatus === 'ended' && winner !== null;
         document.body.classList.toggle('no-scroll', isModalOpen);
         return () => document.body.classList.remove('no-scroll');
-    }, [gameStatus, winner]);
-
-    // Redirect if no name
-    useEffect(() => {
-        if (!playerName) {
-            router.push("/");
-        }
-    }, [playerName, router]);
+    }, [gameStatus, winner, playerName]);
 
     // Redirect khi phòng đầy
     useEffect(() => {
@@ -220,9 +249,9 @@ export default function GameRoom() {
     useEffect(() => {
         const signature = waitingNumbers.join(",");
 
-        if (isWaitingKinh && signature !== lastWaitingSignature) {
+        if (isWaitingKinh && signature !== lastWaitingSignatureRef.current) {
             declareWaitingKinh(true, waitingNumbers);
-            setLastWaitingSignature(signature);
+            lastWaitingSignatureRef.current = signature;
 
             // Local toast for better feel
             const waitingInfo = waitingNumbers.map(n => {
@@ -238,15 +267,15 @@ export default function GameRoom() {
                 icon: '🔥',
                 id: `my-waiting-kinh` // Prevent local spam
             });
-        } else if (!isWaitingKinh && lastWaitingSignature !== "") {
-            setLastWaitingSignature("");
+        } else if (!isWaitingKinh && lastWaitingSignatureRef.current !== "") {
+            lastWaitingSignatureRef.current = "";
         }
-    }, [isWaitingKinh, lastWaitingSignature, declareWaitingKinh, waitingNumbers]);
+    }, [isWaitingKinh, declareWaitingKinh, waitingNumbers]);
 
     useEffect(() => {
         if (gameStatus === 'waiting' || gameStatus === 'ended') {
-            setHasDeclaredWin(false);
-            setLastWaitingSignature("");
+            hasDeclaredWinRef.current = false;
+            lastWaitingSignatureRef.current = "";
         }
     }, [gameStatus]);
 
@@ -261,11 +290,11 @@ export default function GameRoom() {
     }, [myTicket, markedNumbers, gameStatus]);
 
     const handleKinh = () => {
-        if (!myTicket || hasDeclaredWin) return;
+        if (!myTicket || hasDeclaredWinRef.current) return;
 
         if (canKinh) {
             declareWin();
-            setHasDeclaredWin(true);
+            hasDeclaredWinRef.current = true;
             toast.info("Đang gửi yêu cầu Kinh...", { duration: 2000 });
         } else {
             toast.error("Bạn chưa đủ số để Kinh đâu nha! Kiểm tra lại phiếu đi nào.");
@@ -293,7 +322,7 @@ export default function GameRoom() {
                 colors: ['#F59E0B', '#DC2626', '#FFFFFF']
             });
         }
-    }, [gameStatus, winner]);
+    }, [gameStatus, winner, playerName]);
 
     useEffect(() => {
         if (waitingKinhPlayer && waitingKinhPlayer.name !== playerName) {
@@ -339,7 +368,7 @@ export default function GameRoom() {
         toast.success("Đã đổi vé mới!", { icon: "🎫", description });
     };
 
-    if (!playerName) return null;
+    if (!identityReady || !playerName || !playerId) return null;
 
     return (
         <div className="min-h-screen bg-red-950 text-white relative flex flex-col">

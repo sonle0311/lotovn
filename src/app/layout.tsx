@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://lotovn.vercel.app";
 
@@ -106,7 +103,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body className={`${inter.className} bg-red-950 text-white min-h-screen overflow-x-hidden`} suppressHydrationWarning>
+      <body className="bg-red-950 text-white min-h-screen overflow-x-hidden" suppressHydrationWarning>
         {children}
         <Toaster richColors position="top-right" />
         {/* Register PWA Service Worker */}

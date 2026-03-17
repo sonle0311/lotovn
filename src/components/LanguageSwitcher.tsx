@@ -1,19 +1,15 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo } from "react";
 import { AVAILABLE_LOCALES, getLocale, setLocale, type Locale } from "@/lib/i18n";
+import { useHydrated } from "@/lib/useHydrated";
 
 const LanguageSwitcher = memo(function LanguageSwitcher() {
-    // SSR-safe: default 'vi', then sync from localStorage after mount
-    const [locale, setLocalState] = useState<Locale>('vi');
-
-    useEffect(() => {
-        setLocalState(getLocale());
-    }, []);
+    const hydrated = useHydrated();
+    const locale: Locale = hydrated ? getLocale() : "vi";
 
     const handleChange = (newLocale: Locale) => {
         setLocale(newLocale);
-        setLocalState(newLocale);
         window.location.reload();
     };
 

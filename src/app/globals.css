@@ -41,6 +41,7 @@
 
 body {
   color: rgb(var(--foreground-rgb));
+  font-family: "Segoe UI", "Trebuchet MS", "Helvetica Neue", sans-serif;
   background: linear-gradient(to bottom,
       transparent,
       rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));

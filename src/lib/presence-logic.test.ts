@@ -54,21 +54,22 @@ describe('presenceToPlayers', () => {
 
 describe('buildPresencePayload', () => {
     it('should build payload for playing status', () => {
-        const payload = buildPresencePayload('Alice', true, 'playing');
+        const payload = buildPresencePayload('Alice', 'uid-alice', true, 'playing');
         expect(payload).toEqual({
             name: 'Alice',
+            userId: 'uid-alice',
             isHost: true,
             status: 'playing',
         });
     });
 
     it('should map ended status to waiting', () => {
-        const payload = buildPresencePayload('Bob', false, 'ended');
+        const payload = buildPresencePayload('Bob', 'uid-bob', false, 'ended');
         expect(payload.status).toBe('waiting');
     });
 
     it('should merge overrides', () => {
-        const payload = buildPresencePayload('Alice', false, 'waiting', {
+        const payload = buildPresencePayload('Alice', 'uid-alice', false, 'waiting', {
             isWaitingKinh: true,
             waitingNumbers: [1, 2, 3],
         });

@@ -29,8 +29,9 @@ export function presenceToPlayers(presenceState: Record<string, unknown[]>): Pla
         });
 
         const p = sortedPresences[0] as Record<string, unknown>;
+        const resolvedId = (p.userId as string) || (p.name as string) || '';
         players.push({
-            id: (p.name as string) || '',
+            id: resolvedId,
             name: (p.name as string) || '',
             isHost: (p.isHost as boolean) || false,
             status: (p.status as Player['status']) || 'waiting',
@@ -45,12 +46,14 @@ export function presenceToPlayers(presenceState: Record<string, unknown[]>): Pla
 /** Build presence payload cho Supabase channel.track() */
 export function buildPresencePayload(
     playerName: string,
+    playerId: string,
     isHost: boolean,
     gameStatus: 'waiting' | 'playing' | 'ended',
     overrides?: Partial<Player>
 ): Record<string, unknown> {
     return {
         name: playerName,
+        userId: playerId,
         isHost,
         status: gameStatus === 'playing' ? 'playing' : 'waiting',
         ...overrides,

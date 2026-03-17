@@ -22,6 +22,8 @@ const ReplayViewer = memo(function ReplayViewer({ history }: ReplayViewerProps) 
     const [selectedGame, setSelectedGame] = useState<GameHistoryEntry | null>(null);
     const [replayIndex, setReplayIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
+    const hasReachedEnd = selectedGame ? replayIndex >= selectedGame.drawn_numbers.length : false;
+    const isReplayPlaying = isPlaying && !hasReachedEnd;
 
     const reset = useCallback(() => {
         setReplayIndex(0);
@@ -29,14 +31,16 @@ const ReplayViewer = memo(function ReplayViewer({ history }: ReplayViewerProps) 
     }, []);
 
     useEffect(() => {
-        if (!isPlaying || !selectedGame) return;
-        if (replayIndex >= selectedGame.drawn_numbers.length) {
+        if (!selectedGame || !isPlaying) return;
+
+        if (hasReachedEnd) {
             setIsPlaying(false);
             return;
         }
+
         const timer = setTimeout(() => setReplayIndex(p => p + 1), 800);
         return () => clearTimeout(timer);
-    }, [isPlaying, replayIndex, selectedGame]);
+    }, [hasReachedEnd, isPlaying, replayIndex, selectedGame]);
 
     if (history.length === 0) {
         return (
@@ -66,10 +70,17 @@ const ReplayViewer = memo(function ReplayViewer({ history }: ReplayViewerProps) 
                 <div className="p-3">
                     {/* Controls */}
                     <div className="flex gap-2 mb-3 justify-center">
-                        <button onClick={() => setIsPlaying(!isPlaying)}
+                        <button onClick={() => {
+                            if (hasReachedEnd) {
+                                setReplayIndex(0);
+                                setIsPlaying(true);
+                                return;
+                            }
+                            setIsPlaying(prev => !prev);
+                        }}
                             className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-yellow-500 text-xs font-bold flex items-center gap-1">
-                            {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-                            {isPlaying ? "Dừng" : "Phát"}
+                            {isReplayPlaying ? <Pause size={12} /> : <Play size={12} />}
+                            {isReplayPlaying ? "Dừng" : "Phát"}
                         </button>
                         <button onClick={() => setReplayIndex(p => Math.min(p + 1, selectedGame.drawn_numbers.length))}
                             className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-white/60 text-xs font-bold flex items-center gap-1">
