@@ -66,3 +66,23 @@ export async function getRoomHostUserId(
     if (error || !data) return null;
     return data.host_user_id;
 }
+
+/**
+ * Claim host identity in DB after client-side election (host left).
+ * Requires migration 006 claim_room_host() RPC.
+ */
+export async function claimRoomHost(roomId: string): Promise<boolean> {
+    const cleanRoomId = roomId.replace(/[^A-Z0-9]/gi, '').slice(0, 10);
+    if (!cleanRoomId) return false;
+
+    const { data, error } = await supabase.rpc('claim_room_host', {
+        p_room_id: cleanRoomId,
+    });
+
+    if (error) {
+        console.error('Failed to claim room host:', error);
+        return false;
+    }
+
+    return data === true;
+}

@@ -193,19 +193,27 @@ export default function GameRoom() {
     // Persist theme preference
     useEffect(() => { localStorage.setItem('loto-theme', themeId); }, [themeId]);
 
-    // Save game result + award xu when game ends
+    // Save game result + award xu when game ends (once per round)
+    const hasAwardedRoundRef = useRef(false);
+
     useEffect(() => {
-        if (gameStatus === 'ended' && winner) {
-            saveGameResult(roomId, winner.name, drawnNumbers.length, gameMode);
-            if (winner.name === playerName) {
-                addXu(WIN_REWARD);
-                toast.success(`+${WIN_REWARD} xu thưởng chiến thắng! 🎉`);
-            } else {
-                addXu(PLAY_REWARD);
-            }
-            sendNotification('🏆 Lô Tô Tết', `${winner.name} đã KINH!`);
+        if (gameStatus === 'waiting') hasAwardedRoundRef.current = false;
+    }, [gameStatus]);
+
+    useEffect(() => {
+        if (gameStatus !== 'ended' || !winner || hasAwardedRoundRef.current) return;
+
+        hasAwardedRoundRef.current = true;
+        saveGameResult(roomId, winner.name, drawnNumbers.length, gameMode);
+
+        if (winner.playerId === playerId || (!winner.playerId && winner.name === playerName)) {
+            addXu(WIN_REWARD);
+            toast.success(`+${WIN_REWARD} xu thưởng chiến thắng! 🎉`);
+        } else {
+            addXu(PLAY_REWARD);
         }
-    }, [gameStatus, winner, roomId, drawnNumbers.length, gameMode, playerName]);
+        sendNotification('🏆 Lô Tô Tết', `${winner.name} đã KINH!`);
+    }, [gameStatus, winner, roomId, drawnNumbers.length, gameMode, playerName, playerId]);
 
     // Notify when game starts
     useEffect(() => {
@@ -312,7 +320,10 @@ export default function GameRoom() {
     useEffect(() => {
         if (gameStatus === 'ended' && winner) {
             // Only show toast for spectators — winner already sees the modal
-            if (winner.name !== playerName) {
+            const isSelf = winner.playerId
+                ? winner.playerId === playerId
+                : winner.name === playerName;
+            if (!isSelf) {
                 toast.success(`Người chơi ${winner.name} đã KINH!`);
             }
             confetti({
@@ -322,7 +333,7 @@ export default function GameRoom() {
                 colors: ['#F59E0B', '#DC2626', '#FFFFFF']
             });
         }
-    }, [gameStatus, winner, playerName]);
+    }, [gameStatus, winner, playerName, playerId]);
 
     useEffect(() => {
         if (waitingKinhPlayer && waitingKinhPlayer.name !== playerName) {

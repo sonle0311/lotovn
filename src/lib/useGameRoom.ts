@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { LotoTicket, generateTicket } from './gameLogic';
-import { getRoomHostUserId } from './room-service';
+import { claimRoomHost, getRoomHostUserId } from './room-service';
 import { updateRoomPlayerCount } from './game-service';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useHydrated } from './useHydrated';
@@ -15,10 +15,16 @@ import {
     createChatMessage,
     getChatThrottleRemaining,
     MAX_CHAT_MESSAGES,
+    sanitizeText,
 } from './chat-logic';
 import type { ChatMessage } from './chat-logic';
 import { validateWinRequest, MAX_PLAYERS } from './game-state-logic';
 import type { WinnerData } from './game-state-logic';
+import {
+    electHostUserId,
+    isAuthorizedHostPayload,
+    shouldAcceptHostChange,
+} from './host-logic';
 
 // ─── Re-exports for backward compatibility ──────────────────
 export type { Player, ChatMessage, WinnerData };
@@ -53,6 +59,13 @@ function readStoredWins(key: string): number {
     }
 }
 
+function withHostAuth<T extends Record<string, unknown>>(
+    hostUserId: string,
+    payload: T
+): T & { hostUserId: string } {
+    return { ...payload, hostUserId };
+}
+
 export const useGameRoom = (roomId: string, playerName: string, playerId: string) => {
     const hydrated = useHydrated();
     const [players, setPlayers] = useState<Player[]>([]);
@@ -66,7 +79,9 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
 
     // Host resolved from DB (default false until async fetch completes)
     const [isHost, setIsHost] = useState(false);
+    const [hostResolved, setHostResolved] = useState(false);
     const isHostRef = useRef(false);
+    const knownHostUserIdRef = useRef<string | null>(null);
 
     const [winner, setWinner] = useState<WinnerData | null>(null);
     const [winRejected, setWinRejected] = useState(false);
@@ -86,6 +101,8 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
     const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const gameStatusRef = useRef<'waiting' | 'playing' | 'ended'>('waiting');
     const waitingKinhTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const committedTicketsRef = useRef<Map<string, LotoTicket>>(new Map());
+    const myTicketRef = useRef<LotoTicket | null>(null);
     const sessionWinsKey = `loto-session-${roomId}-${playerId}`;
     const storedTicket = useMemo(
         () => (hydrated ? readStoredTicket(roomId) : null),
@@ -117,18 +134,42 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
         return next;
     }, [autoMarkEnabled, drawnNumbers, gameStatus, manualMarkedNumbers, myTicket]);
 
+    useEffect(() => {
+        myTicketRef.current = myTicket;
+    }, [myTicket]);
+
+    const applyHostRole = useCallback((amHost: boolean, hostUserId: string | null) => {
+        knownHostUserIdRef.current = hostUserId;
+        setIsHost(amHost);
+        isHostRef.current = amHost;
+    }, []);
+
     // Resolve host authority from DB on mount — replaces URL ?host=true spoof
     useEffect(() => {
         if (!playerId) return;
         let cancelled = false;
+        setHostResolved(false);
         getRoomHostUserId(roomId).then((hostUserId) => {
             if (cancelled) return;
             const amHost = hostUserId === playerId;
-            setIsHost(amHost);
-            isHostRef.current = amHost;
+            applyHostRole(amHost, hostUserId);
+            setHostResolved(true);
+            // Re-track after async resolve so presence matches DB authority
+            if (channelRef.current) {
+                void channelRef.current.track({
+                    name: playerName,
+                    userId: playerId,
+                    isHost: amHost,
+                    status: gameStatusRef.current === 'playing' ? 'playing' : 'waiting',
+                });
+            }
+        }).catch(() => {
+            if (cancelled) return;
+            applyHostRole(false, null);
+            setHostResolved(true);
         });
         return () => { cancelled = true; };
-    }, [roomId, playerId]);
+    }, [roomId, playerId, playerName, applyHostRole]);
 
     // Sync player count to DB (host-only, debounced)
     useEffect(() => {
@@ -202,20 +243,46 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
         });
     }, [playerId, playerName]);
 
+    const broadcastTicketCommit = useCallback(() => {
+        const ticket = myTicketRef.current;
+        if (!ticket || !channelRef.current || !playerId) return;
+        // Lock first commit only; ignore later regenerations mid-round.
+        if (committedTicketsRef.current.has(playerId)) return;
+        if (drawnNumbersRef.current.length > 0) return;
+
+        committedTicketsRef.current.set(playerId, ticket);
+        channelRef.current.send({
+            type: 'broadcast',
+            event: 'ticket_commit',
+            payload: { playerId, ticket },
+        });
+    }, [playerId]);
+
     // ─── Helper: Reset game state ────────────────────────────
     const applyGameReset = useCallback((clearMessages = false) => {
         setDrawnNumbers([]);
         setCurrentNumber(null);
+        drawnNumbersRef.current = [];
+        currentNumberRef.current = null;
         setWinner(null);
         setWinRejected(false);
         setManualMarkedNumbers(new Set());
         setWaitingKinhPlayer(null);
+        committedTicketsRef.current.clear();
         if (clearMessages) setMessages([]);
     }, []);
 
+    const becomeHost = useCallback(async (reason: 'election' | 'db') => {
+        applyHostRole(true, playerId);
+        if (reason === 'election') {
+            await claimRoomHost(roomId);
+        }
+        await trackPresence({ isHost: true });
+    }, [applyHostRole, playerId, roomId, trackPresence]);
+
     // ─── Handle Channel Lifecycle ────────────────────────────
     useEffect(() => {
-        if (!roomId || !playerName || !playerId) return;
+        if (!roomId || !playerName || !playerId || !hostResolved) return;
 
         const channel = supabase.channel(`room:${roomId}`, {
             config: {
@@ -234,54 +301,63 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
                 // Kiểm tra phòng đầy
                 setIsRoomFull(playerList.length >= MAX_PLAYERS);
             })
-            .on('presence', { event: 'join' }, ({ newPresences }) => {
-                // Anti-cheat: Nếu đã có host khác → tước quyền
-                for (const presence of newPresences) {
-                    const p = presence as Record<string, unknown>;
-                    if (p.isHost && p.userId !== playerId && isHostRef.current) {
-                        setIsHost(false);
-                        isHostRef.current = false;
-                    }
-                }
-            })
 
-            // ─── Host Migration ──────────────────────────────
+            // ─── Host Migration (validated election only) ────
             .on('broadcast', { event: 'host_change' }, ({ payload }) => {
                 const newHostUserId = payload.newHostUserId as string;
-                if (newHostUserId === playerId) {
-                    setIsHost(true);
-                    isHostRef.current = true;
-                } else {
-                    setIsHost(false);
-                    isHostRef.current = false;
+                const playerList = presenceToPlayers(channel.presenceState());
+
+                if (!shouldAcceptHostChange(playerList, newHostUserId, knownHostUserIdRef.current)) {
+                    return;
                 }
-                // Re-track với isHost mới
+
+                const amHost = newHostUserId === playerId;
+                applyHostRole(amHost, newHostUserId);
                 channel.track({
                     name: playerName,
                     userId: playerId,
-                    isHost: newHostUserId === playerId,
+                    isHost: amHost,
                     status: gameStatusRef.current === 'playing' ? 'playing' : 'waiting',
                 });
+
+                if (amHost) {
+                    void claimRoomHost(roomId);
+                }
             })
 
-            // ─── Game Events ─────────────────────────────────
-            .on('broadcast', { event: 'game_start' }, () => {
+            // ─── Ticket commit (anti fabricated-ticket) ───────
+            // First commit wins for the round; reject first-time commits after draws started.
+            .on('broadcast', { event: 'ticket_commit' }, ({ payload }) => {
+                const pid = payload.playerId as string;
+                const ticket = payload.ticket as LotoTicket;
+                if (!pid || !ticket) return;
+                if (committedTicketsRef.current.has(pid)) return;
+                if (drawnNumbersRef.current.length > 0) return;
+                committedTicketsRef.current.set(pid, ticket);
+            })
+
+            // ─── Game Events (require known host uid) ─────────
+            .on('broadcast', { event: 'game_start' }, ({ payload }) => {
+                if (!isAuthorizedHostPayload(payload?.hostUserId, knownHostUserIdRef.current)) return;
+
                 setGameStatus('playing');
                 gameStatusRef.current = 'playing';
                 applyGameReset();
-                // Re-track status 'playing'
                 channel.track({
                     name: playerName,
                     userId: playerId,
                     isHost: isHostRef.current,
                     status: 'playing',
                 });
+                // Commit current ticket for this round (before any draws)
+                broadcastTicketCommit();
             })
-            .on('broadcast', { event: 'game_reset' }, () => {
+            .on('broadcast', { event: 'game_reset' }, ({ payload }) => {
+                if (!isAuthorizedHostPayload(payload?.hostUserId, knownHostUserIdRef.current)) return;
+
                 setGameStatus('waiting');
                 gameStatusRef.current = 'waiting';
                 applyGameReset(true);
-                // Re-track status 'waiting'
                 channel.track({
                     name: playerName,
                     userId: playerId,
@@ -290,43 +366,65 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
                 });
             })
             .on('broadcast', { event: 'number_draw' }, ({ payload }) => {
-                setDrawnNumbers(prev => [...prev, payload.number]);
-                setCurrentNumber(payload.number);
+                if (!isAuthorizedHostPayload(payload?.hostUserId, knownHostUserIdRef.current)) return;
+
+                const number = payload.number as number;
+                if (typeof number !== 'number' || number < 1 || number > 90) return;
+                if (drawnNumbersRef.current.includes(number)) return;
+
+                setDrawnNumbers(prev => [...prev, number]);
+                setCurrentNumber(number);
             })
             .on('broadcast', { event: 'chat' }, ({ payload }) => {
-                appendMessage(payload);
+                const raw = payload as ChatMessage;
+                appendMessage({
+                    ...raw,
+                    senderName: sanitizeText(raw.senderName || '', 20),
+                    text: sanitizeText(raw.text || '', 200),
+                });
             })
             // ─── Win Validation Flow ──────────────────────────
-            // Step 1: Any player requests win — host validates
             .on('broadcast', { event: 'win_request' }, ({ payload }) => {
                 if (!isHostRef.current) return;
 
-                const result = validateWinRequest(payload as Parameters<typeof validateWinRequest>[0], drawnNumbersRef.current);
+                const req = payload as Parameters<typeof validateWinRequest>[0];
+                const committed = committedTicketsRef.current.get(req.playerId);
+                const result = validateWinRequest(req, drawnNumbersRef.current, committed);
 
                 if (!result.valid) {
-                    channel.send({ type: 'broadcast', event: 'win_rejected', payload: { name: (payload as { name: string }).name, reason: result.reason } });
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'win_rejected',
+                        payload: withHostAuth(knownHostUserIdRef.current || playerId, {
+                            name: req.name,
+                            playerId: req.playerId,
+                            reason: result.reason,
+                        }),
+                    });
                     return;
                 }
 
-                channel.send({ type: 'broadcast', event: 'game_end', payload: { winner: result.winner } });
+                channel.send({
+                    type: 'broadcast',
+                    event: 'game_end',
+                    payload: withHostAuth(knownHostUserIdRef.current || playerId, { winner: result.winner }),
+                });
 
-                // Host local update (broadcast doesn't echo to sender)
                 setWinner(result.winner);
                 setGameStatus('ended');
                 gameStatusRef.current = 'ended';
-                if (result.winner.name === playerName) incrementSessionWins();
+                if (result.winner.playerId === playerId) incrementSessionWins();
             })
-            // Step 2: All non-host clients receive confirmed win
             .on('broadcast', { event: 'game_end' }, ({ payload }) => {
+                if (!isAuthorizedHostPayload(payload?.hostUserId, knownHostUserIdRef.current)) return;
+
                 setWinner(payload.winner as WinnerData);
                 setGameStatus('ended');
                 gameStatusRef.current = 'ended';
-                // Increment session score if this player won
-                if ((payload.winner as WinnerData).name === playerName) incrementSessionWins();
+                if ((payload.winner as WinnerData).playerId === playerId) incrementSessionWins();
             })
-            // Step 3: Requester gets rejection feedback
             .on('broadcast', { event: 'win_rejected' }, ({ payload }) => {
-                if ((payload.name as string) === playerName) {
+                if ((payload.playerId as string) === playerId || (payload.name as string) === playerName) {
                     setWinRejected(true);
                     setTimeout(() => setWinRejected(false), 3000);
                 }
@@ -336,34 +434,52 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
                 if (waitingKinhTimerRef.current) clearTimeout(waitingKinhTimerRef.current);
                 waitingKinhTimerRef.current = setTimeout(() => setWaitingKinhPlayer(null), 5000);
             })
-            // ─── Late Sync Sync ──────────────────────────────
             .on('broadcast', { event: 'sync_request' }, () => {
                 if (isHostRef.current) {
                     channel.send({
                         type: 'broadcast',
                         event: 'sync_state',
-                        payload: {
+                        payload: withHostAuth(knownHostUserIdRef.current || playerId, {
                             drawnNumbers: drawnNumbersRef.current,
                             gameStatus: gameStatusRef.current,
-                            currentNumber: currentNumberRef.current
-                        }
+                            currentNumber: currentNumberRef.current,
+                            // Help late joiners validate wins for already-committed players
+                            committedTickets: Array.from(committedTicketsRef.current.entries()).map(
+                                ([pid, ticket]) => ({ playerId: pid, ticket })
+                            ),
+                        }),
                     });
                 }
             })
             .on('broadcast', { event: 'sync_state' }, ({ payload }) => {
-                // Chỉ nhận sync nếu mình không phải host và không bị rollback (số mới >= số cũ)
-                if (!isHostRef.current &&
-                    (payload.drawnNumbers as number[]).length >= drawnNumbersRef.current.length) {
-                    setDrawnNumbers(payload.drawnNumbers);
-                    setGameStatus(payload.gameStatus);
-                    setCurrentNumber(payload.currentNumber);
-                    gameStatusRef.current = payload.gameStatus;
+                if (!isAuthorizedHostPayload(payload?.hostUserId, knownHostUserIdRef.current)) return;
+                if (isHostRef.current) return;
+
+                const incomingDrawn = payload.drawnNumbers as number[];
+                if (!Array.isArray(incomingDrawn)) return;
+                if (incomingDrawn.length < drawnNumbersRef.current.length) return;
+
+                setDrawnNumbers(incomingDrawn);
+                setGameStatus(payload.gameStatus);
+                setCurrentNumber(payload.currentNumber);
+                gameStatusRef.current = payload.gameStatus;
+
+                const commits = payload.committedTickets as { playerId: string; ticket: LotoTicket }[] | undefined;
+                if (Array.isArray(commits)) {
+                    for (const entry of commits) {
+                        if (entry?.playerId && entry?.ticket) {
+                            committedTicketsRef.current.set(entry.playerId, entry.ticket);
+                        }
+                    }
+                }
+
+                if (payload.gameStatus === 'playing' && myTicketRef.current) {
+                    broadcastTicketCommit();
                 }
             })
             .on('broadcast', { event: 'emoji_reaction' }, ({ payload }) => {
                 const reaction = payload as { id: string; emoji: string; senderName: string };
                 setIncomingReactions(prev => [...prev, reaction]);
-                // Auto-remove sau 2.5s
                 setTimeout(() => {
                     setIncomingReactions(prev => prev.filter(r => r.id !== reaction.id));
                 }, 2500);
@@ -371,7 +487,6 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
 
         channel.subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
-                // Track presence — Supabase tự broadcast cho mọi người
                 await channel.track({
                     name: playerName,
                     userId: playerId,
@@ -379,7 +494,6 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
                     status: 'waiting',
                 });
 
-                // Nếu không phải host ban đầu, yêu cầu đồng bộ
                 if (!isHostRef.current) {
                     channel.send({
                         type: 'broadcast',
@@ -387,16 +501,29 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
                         payload: {}
                     });
                 }
+
+                if (gameStatusRef.current === 'playing') {
+                    broadcastTicketCommit();
+                }
             }
         });
 
         return () => {
-            // Supabase tự phát leave event khi unsubscribe
             channel.unsubscribe();
             channelRef.current = null;
             if (waitingKinhTimerRef.current) clearTimeout(waitingKinhTimerRef.current);
         };
-    }, [roomId, playerName, playerId, appendMessage, applyGameReset, incrementSessionWins]);
+    }, [
+        roomId,
+        playerName,
+        playerId,
+        hostResolved,
+        appendMessage,
+        applyGameReset,
+        incrementSessionWins,
+        applyHostRole,
+        broadcastTicketCommit,
+    ]);
 
     // ─── Non-host: detect host offline & migrate ────────────
     useEffect(() => {
@@ -407,37 +534,32 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
             if (!channelRef.current) return;
             const state = channelRef.current.presenceState();
             const playerList = presenceToPlayers(state);
-            const host = playerList.find(p => p.isHost);
+            const elected = electHostUserId(
+                // Treat known host as host flag for election if still present
+                playerList.map((p) => ({
+                    id: p.id,
+                    isHost: p.isHost || p.id === knownHostUserIdRef.current,
+                }))
+            );
 
-            if (!host && playerList.length > 0) {
-                // Host biến mất → player đầu tiên nhận host
-                const sorted = playerList
-                    .filter(p => !p.isHost)
-                    .sort((a, b) => a.id.localeCompare(b.id));
+            const knownStillHere = knownHostUserIdRef.current
+                ? playerList.some((p) => p.id === knownHostUserIdRef.current)
+                : false;
 
-                if (sorted.length > 0 && sorted[0].id === playerId) {
-                    setIsHost(true);
-                    isHostRef.current = true;
+            if (knownStillHere) return;
+            if (!elected || elected !== playerId) return;
 
-                    channelRef.current?.send({
-                        type: 'broadcast',
-                        event: 'host_change',
-                        payload: { newHostUserId: playerId },
-                    });
-
-                    // Re-track với isHost = true
-                    channelRef.current?.track({
-                        name: playerName,
-                        userId: playerId,
-                        isHost: true,
-                        status: gameStatusRef.current === 'playing' ? 'playing' : 'waiting',
-                    });
-                }
-            }
+            void becomeHost('election').then(() => {
+                channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'host_change',
+                    payload: { newHostUserId: playerId },
+                });
+            });
         }, 10000);
 
         return () => clearInterval(checkHostAlive);
-    }, [isHost, playerId, playerName]);
+    }, [isHost, playerId, becomeHost]);
 
     // ─── Chat Cooldown Timer ────────────────────────────────
     const lastMessageTimeRef = useRef(0);
@@ -452,36 +574,36 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
 
     // ─── Actions ────────────────────────────────────────────
     const startGame = useCallback(() => {
-        if (!isHostRef.current) return;
+        if (!isHostRef.current || !knownHostUserIdRef.current) return;
 
-        // Auto-reset nếu game đã ended
         if (gameStatusRef.current === 'ended') {
             applyGameReset(true);
         }
 
+        const hostUserId = knownHostUserIdRef.current;
         channelRef.current?.send({
             type: 'broadcast',
             event: 'game_start',
-            payload: {},
+            payload: withHostAuth(hostUserId, {}),
         });
 
-        // Local update for host (broadcast doesn't echo to sender)
         setGameStatus('playing');
         gameStatusRef.current = 'playing';
         applyGameReset();
-
-        // Re-track status 'playing' cho host
         trackPresence({ status: 'playing' });
-    }, [applyGameReset, trackPresence]);
+        broadcastTicketCommit();
+    }, [applyGameReset, trackPresence, broadcastTicketCommit]);
 
     const drawNumber = useCallback((number: number) => {
-        if (!isHostRef.current) return;
+        if (!isHostRef.current || !knownHostUserIdRef.current) return;
+        if (number < 1 || number > 90) return;
+        if (drawnNumbersRef.current.includes(number)) return;
+
         channelRef.current?.send({
             type: 'broadcast',
             event: 'number_draw',
-            payload: { number },
+            payload: withHostAuth(knownHostUserIdRef.current, { number }),
         });
-        // Local update
         setDrawnNumbers(prev => [...prev, number]);
         setCurrentNumber(number);
     }, []);
@@ -521,12 +643,19 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
     }, [playerName, appendMessage]);
 
     const declareWin = useCallback(() => {
-        if (!myTicket) return;
+        if (!myTicket || !playerId) return;
 
+        // Must already have committed at round start — do not allow late overwrite.
+        if (!committedTicketsRef.current.has(playerId)) {
+            broadcastTicketCommit();
+        }
+
+        const committed = committedTicketsRef.current.get(playerId) || myTicket;
         const request = {
+            playerId,
             name: playerName,
             isHost: isHostRef.current,
-            ticket: myTicket,
+            ticket: committed,
             markedNumbers: Array.from(markedNumbers),
         };
 
@@ -536,21 +665,28 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
             payload: request,
         });
 
-        // Host: broadcast không echo lại, validate locally
         if (isHostRef.current) {
-            const result = validateWinRequest(request, drawnNumbersRef.current);
+            const result = validateWinRequest(
+                request,
+                drawnNumbersRef.current,
+                committedTicketsRef.current.get(playerId)
+            );
             if (result.valid) {
-                channelRef.current?.send({ type: 'broadcast', event: 'game_end', payload: { winner: result.winner } });
+                channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'game_end',
+                    payload: withHostAuth(knownHostUserIdRef.current || playerId, { winner: result.winner }),
+                });
                 setWinner(result.winner);
                 setGameStatus('ended');
                 gameStatusRef.current = 'ended';
-                if (result.winner.name === playerName) incrementSessionWins();
+                if (result.winner.playerId === playerId) incrementSessionWins();
             } else {
                 setWinRejected(true);
                 setTimeout(() => setWinRejected(false), 3000);
             }
         }
-    }, [playerName, myTicket, markedNumbers, incrementSessionWins]);
+    }, [playerId, playerName, myTicket, markedNumbers, incrementSessionWins, broadcastTicketCommit]);
 
     const declareWaitingKinh = useCallback((isWaiting: boolean, waitingNumbers?: number[]) => {
         const player: Player = {
@@ -584,29 +720,25 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
     }, []);
 
     const resetGame = useCallback(() => {
-        if (!isHostRef.current) return;
+        if (!isHostRef.current || !knownHostUserIdRef.current) return;
         channelRef.current?.send({
             type: 'broadcast',
             event: 'game_reset',
-            payload: {},
+            payload: withHostAuth(knownHostUserIdRef.current, {}),
         });
-        // Local reset for host
         setGameStatus('waiting');
         gameStatusRef.current = 'waiting';
         applyGameReset(true);
-
-        // Re-track status 'waiting'
         trackPresence({ status: 'waiting' });
     }, [applyGameReset, trackPresence]);
 
     const regenerateTicket = useCallback(() => {
         if (gameStatusRef.current !== 'waiting') return;
-        if (keepTicketPref) return; // user wants to keep ticket
+        if (keepTicketPref) return;
         const newTicket = generateTicket();
         setTicketState({ roomId, ticket: newTicket });
     }, [keepTicketPref, roomId]);
 
-    // Force regenerate always generates new ticket and clears keep preference
     const forceRegenerateTicket = useCallback(() => {
         if (gameStatusRef.current !== 'waiting') return;
         setTicketState({ roomId, ticket: generateTicket() });
@@ -615,7 +747,6 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
 
     const toggleAutoMark = useCallback(() => {
         if (autoMarkEnabled) {
-            // Preserve visible marks when switching auto-mark off mid-game.
             setManualMarkedNumbers((prevMarked) => {
                 const next = new Set(prevMarked);
                 markedNumbers.forEach((num) => next.add(num));
@@ -625,6 +756,7 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
 
         setAutoMarkOverride(!autoMarkEnabled);
     }, [autoMarkEnabled, markedNumbers]);
+
     const toggleKeepTicket = useCallback((val?: boolean) =>
         setKeepTicketOverride((prev) => {
             const current = prev ?? readStoredBoolean("loto-keep-ticket");
@@ -642,7 +774,6 @@ export const useGameRoom = (roomId: string, playerName: string, playerId: string
             event: 'emoji_reaction',
             payload: reaction,
         });
-        // Show locally too (broadcast doesn't echo)
         setIncomingReactions(prev => [...prev, reaction]);
         setTimeout(() => {
             setIncomingReactions(prev => prev.filter(r => r.id !== reaction.id));
