@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { validateWinRequest, MAX_PLAYERS } from './game-state-logic';
+import { validateWinRequest, MAX_PLAYERS, isValidLotoTicket, collectTicketNumbers } from './game-state-logic';
 import type { WinRequest } from './game-state-logic';
 import { generateTicket, checkRowWin } from './gameLogic';
+import type { LotoTicket } from './gameLogic';
 
 describe('validateWinRequest', () => {
     const drawnNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -10,42 +11,92 @@ describe('validateWinRequest', () => {
         61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
         81, 82, 83, 84, 85, 86, 87, 88, 89, 90];
 
-    it('should reject when marked numbers are not in drawn list', () => {
+    it('should reject when committed ticket is missing', () => {
         const ticket = generateTicket();
         const request: WinRequest = {
+            playerId: 'uid-1',
             name: 'Player1',
             isHost: false,
             ticket,
-            markedNumbers: [999], // số không tồn tại
+            markedNumbers: [1, 2, 3],
         };
 
-        const result = validateWinRequest(request, [1, 2, 3]);
+        const result = validateWinRequest(request, drawnNumbers, null);
+        expect(result.valid).toBe(false);
+        if (!result.valid) expect(result.reason).toBe('ticket_mismatch');
+    });
+
+    it('should reject fabricated ticket that differs from commit', () => {
+        const committed = generateTicket();
+        const fake = generateTicket();
+        const fakeNums = Array.from(collectTicketNumbers(fake));
+        const request: WinRequest = {
+            playerId: 'uid-1',
+            name: 'Cheater',
+            isHost: false,
+            ticket: fake,
+            markedNumbers: fakeNums.slice(0, 5),
+        };
+
+        const result = validateWinRequest(request, drawnNumbers, committed);
+        expect(result.valid).toBe(false);
+        if (!result.valid) expect(result.reason).toBe('ticket_mismatch');
+    });
+
+    it('should reject when marked numbers are not in drawn list', () => {
+        const ticket = generateTicket();
+        const request: WinRequest = {
+            playerId: 'uid-1',
+            name: 'Player1',
+            isHost: false,
+            ticket,
+            markedNumbers: [999],
+        };
+
+        const result = validateWinRequest(request, [1, 2, 3], ticket);
         expect(result.valid).toBe(false);
         if (!result.valid) {
             expect(result.reason).toBe('invalid_marks');
         }
     });
 
-    it('should reject when no win condition met', () => {
+    it('should reject marks not printed on committed ticket', () => {
         const ticket = generateTicket();
-        // Chỉ mark 1-2 số → không đủ hàng
+        const ticketNums = collectTicketNumbers(ticket);
+        const outsider = drawnNumbers.find((n) => !ticketNums.has(n))!;
         const request: WinRequest = {
+            playerId: 'uid-1',
             name: 'Player1',
             isHost: false,
             ticket,
-            markedNumbers: [1, 2],
+            markedNumbers: [outsider],
         };
 
-        const result = validateWinRequest(request, drawnNumbers);
+        const result = validateWinRequest(request, drawnNumbers, ticket);
+        expect(result.valid).toBe(false);
+        if (!result.valid) expect(result.reason).toBe('marks_not_on_ticket');
+    });
+
+    it('should reject when no win condition met', () => {
+        const ticket = generateTicket();
+        const nums = Array.from(collectTicketNumbers(ticket)).slice(0, 2);
+        const request: WinRequest = {
+            playerId: 'uid-1',
+            name: 'Player1',
+            isHost: false,
+            ticket,
+            markedNumbers: nums,
+        };
+
+        const result = validateWinRequest(request, drawnNumbers, ticket);
         expect(result.valid).toBe(false);
         if (!result.valid) {
             expect(result.reason).toBe('no_win_condition');
         }
     });
 
-    it('should accept valid win with full row', () => {
+    it('should accept valid win with full row against committed ticket', () => {
         const ticket = generateTicket();
-        // Tìm 1 hàng hoàn chỉnh từ ticket
         const drawnSet = new Set(drawnNumbers);
         let winRow: (number | null)[] | null = null;
 
@@ -59,20 +110,21 @@ describe('validateWinRequest', () => {
             if (winRow) break;
         }
 
-        // Nếu tìm được hàng thắng (tất cả số đều trong drawnNumbers vì draw hết 1-90)
         if (winRow) {
             const markedNumbers = winRow.filter((n): n is number => n !== null);
             const request: WinRequest = {
+                playerId: 'uid-winner',
                 name: 'Winner',
                 isHost: true,
                 ticket,
                 markedNumbers,
             };
 
-            const result = validateWinRequest(request, drawnNumbers);
+            const result = validateWinRequest(request, drawnNumbers, ticket);
             expect(result.valid).toBe(true);
             if (result.valid) {
                 expect(result.winner.name).toBe('Winner');
+                expect(result.winner.playerId).toBe('uid-winner');
                 expect(result.winner.isHost).toBe(true);
             }
         }
@@ -80,26 +132,48 @@ describe('validateWinRequest', () => {
 
     it('should return correct winner data on valid win', () => {
         const ticket = generateTicket();
-        // Lấy tất cả số từ frame đầu tiên
         const allNums: number[] = [];
         ticket.frames[0].forEach(row => {
             row.forEach(n => { if (n !== null) allNums.push(n); });
         });
 
         const request: WinRequest = {
+            playerId: 'uid-test',
             name: 'TestPlayer',
             isHost: false,
             ticket,
             markedNumbers: allNums,
         };
 
-        const result = validateWinRequest(request, drawnNumbers);
+        const result = validateWinRequest(request, drawnNumbers, ticket);
         expect(result.valid).toBe(true);
         if (result.valid) {
             expect(result.winner.name).toBe('TestPlayer');
+            expect(result.winner.playerId).toBe('uid-test');
             expect(result.winner.ticket).toBe(ticket);
             expect(result.winner.markedNumbers).toEqual(allNums);
         }
+    });
+});
+
+describe('isValidLotoTicket', () => {
+    it('accepts generated tickets', () => {
+        expect(isValidLotoTicket(generateTicket())).toBe(true);
+    });
+
+    it('rejects obviously fabricated ticket', () => {
+        const fake = {
+            id: 'x',
+            color: '#fff',
+            frames: [
+                [
+                    [1, 2, 3, 4, 5, null, null, null, null],
+                    [null, null, null, null, null, null, null, null, null],
+                    [null, null, null, null, null, null, null, null, null],
+                ],
+            ],
+        } as LotoTicket;
+        expect(isValidLotoTicket(fake)).toBe(false);
     });
 });
 

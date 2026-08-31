@@ -35,6 +35,13 @@ export default function AdminControls({ onStart, onDraw, gameStatus, drawnNumber
     const [savingPublic, setSavingPublic] = useState(false);
 
     useEffect(() => {
+        if (gameStatus !== 'playing') {
+            setAutoDraw(false);
+            setCountdown(0);
+        }
+    }, [gameStatus]);
+
+    useEffect(() => {
         if (!autoDraw || gameStatus !== 'playing' || countdown <= 0) return;
         const timer = setTimeout(() => {
             setCountdown(prev => prev - 1);
